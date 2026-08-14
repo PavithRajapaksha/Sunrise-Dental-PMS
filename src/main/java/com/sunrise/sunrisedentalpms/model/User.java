@@ -2,15 +2,16 @@ package com.sunrise.sunrisedentalpms.model;
 
 import java.util.Objects;
 
-
-public class User {
+public class User extends Person {
 
     private final String userId;
     private String username;
     private String hashedPassword;
     private UserRole role;
 
-    public User(String userId, String username, String hashedPassword, UserRole role) {
+    public User(String userId, String username, String hashedPassword, UserRole role,
+                String name, String contactNumber) {
+        super(name, contactNumber);
         if (userId == null || userId.trim().isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be empty");
         }
