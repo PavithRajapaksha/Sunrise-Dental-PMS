@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/** Invoice generated for an appointment: treatment cost plus the dentist's consultation fee. */
+/** Invoice generated for an appointment, based on the treatment type's fee. */
 public class Bill {
 
     private final String billId;
@@ -36,16 +36,8 @@ public class Bill {
         return billDate;
     }
 
-    public BigDecimal getTreatmentCost() {
-        return appointment.getTreatmentType().getBaseCost();
-    }
-
-    public BigDecimal getConsultationFee() {
-        return appointment.getDentist().getConsultationFee();
-    }
-
     public BigDecimal getTotalAmount() {
-        return getTreatmentCost().add(getConsultationFee());
+        return appointment.getTreatmentType().getConsultationFee();
     }
 
     @Override

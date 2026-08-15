@@ -1,39 +1,36 @@
 package com.sunrise.sunrisedentalpms.model;
 
-import java.math.BigDecimal;
+import java.util.Objects;
 
-/** A dentist who treats patients and has a per-visit consultation fee. */
+/** A dentist who treats patients. */
 public class Dentist extends Person {
 
     private final String dentistId;
-    private BigDecimal consultationFee;
+    private DentistStatus status;
 
-    public Dentist(String dentistId, String name, String contactNumber, BigDecimal consultationFee) {
+    public Dentist(String dentistId, String name, String contactNumber) {
         super(name, contactNumber);
         if (dentistId == null || dentistId.trim().isEmpty()) {
             throw new IllegalArgumentException("Dentist ID cannot be empty");
         }
         this.dentistId = dentistId.trim();
-        setConsultationFee(consultationFee);
+        setStatus(DentistStatus.AVAILABLE);
     }
 
     public String getDentistId() {
         return dentistId;
     }
 
-    public BigDecimal getConsultationFee() {
-        return consultationFee;
+    public DentistStatus getStatus() {
+        return status;
     }
 
-    public void setConsultationFee(BigDecimal consultationFee) {
-        if (consultationFee == null || consultationFee.signum() < 0) {
-            throw new IllegalArgumentException("Consultation fee cannot be negative");
-        }
-        this.consultationFee = consultationFee;
+    public void setStatus(DentistStatus status) {
+        this.status = Objects.requireNonNull(status, "Status cannot be null");
     }
 
     @Override
     public String toString() {
-        return "Dentist{" + "dentistId='" + dentistId + '\'' + ", name='" + getName() + '\'' + '}';
+        return "Dentist{" + "dentistId='" + dentistId + '\'' + ", name='" + getName() + '\'' + ", status=" + status + '}';
     }
 }

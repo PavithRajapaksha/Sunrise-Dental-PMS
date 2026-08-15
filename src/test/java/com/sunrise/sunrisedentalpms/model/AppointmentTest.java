@@ -13,6 +13,7 @@ class AppointmentTest {
 
     private Patient patient;
     private Dentist dentist;
+    private TreatmentType treatmentType;
 
     @BeforeEach
     void setUp() {
@@ -20,7 +21,8 @@ class AppointmentTest {
         dentist = Mockito.mock(Dentist.class);
         Mockito.when(patient.getName()).thenReturn("Kasun Perera");
         Mockito.when(dentist.getName()).thenReturn("Dr. Silva");
-        Mockito.when(dentist.getConsultationFee()).thenReturn(new BigDecimal("1500"));
+
+        treatmentType = new TreatmentType("1", "Filling", new BigDecimal("5000"));
     }
 
     @Test
@@ -30,14 +32,14 @@ class AppointmentTest {
         Appointment appointment = new Appointment.Builder("APT001")
                 .patient(patient)
                 .dentist(dentist)
-                .treatmentType(TreatmentType.FILLING)
+                .treatmentType(treatmentType)
                 .appointmentDateTime(dateTime)
                 .build();
 
         assertEquals("APT001", appointment.getAppointmentNumber());
         assertEquals(patient, appointment.getPatient());
         assertEquals(dentist, appointment.getDentist());
-        assertEquals(TreatmentType.FILLING, appointment.getTreatmentType());
+        assertEquals(treatmentType, appointment.getTreatmentType());
         assertEquals(dateTime, appointment.getAppointmentDateTime());
         assertEquals(AppointmentStatus.SCHEDULED, appointment.getStatus());
     }
@@ -48,7 +50,7 @@ class AppointmentTest {
                 new Appointment.Builder(null)
                         .patient(patient)
                         .dentist(dentist)
-                        .treatmentType(TreatmentType.FILLING)
+                        .treatmentType(treatmentType)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
                         .build());
     }
@@ -58,7 +60,7 @@ class AppointmentTest {
         assertThrows(NullPointerException.class, () ->
                 new Appointment.Builder("APT002")
                         .dentist(dentist)
-                        .treatmentType(TreatmentType.FILLING)
+                        .treatmentType(treatmentType)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
                         .build());
     }
@@ -68,7 +70,7 @@ class AppointmentTest {
         assertThrows(NullPointerException.class, () ->
                 new Appointment.Builder("APT003")
                         .patient(patient)
-                        .treatmentType(TreatmentType.FILLING)
+                        .treatmentType(treatmentType)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
                         .build());
     }
@@ -89,7 +91,7 @@ class AppointmentTest {
                 new Appointment.Builder("APT005")
                         .patient(patient)
                         .dentist(dentist)
-                        .treatmentType(TreatmentType.FILLING)
+                        .treatmentType(treatmentType)
                         .build());
     }
 
@@ -98,7 +100,7 @@ class AppointmentTest {
         Appointment appointment = new Appointment.Builder("APT006")
                 .patient(patient)
                 .dentist(dentist)
-                .treatmentType(TreatmentType.CONSULTATION)
+                .treatmentType(treatmentType)
                 .appointmentDateTime(LocalDateTime.now().plusHours(2))
                 .build();
 
@@ -110,7 +112,7 @@ class AppointmentTest {
         Appointment appointment = new Appointment.Builder("APT007")
                 .patient(patient)
                 .dentist(dentist)
-                .treatmentType(TreatmentType.EXTRACTION)
+                .treatmentType(treatmentType)
                 .appointmentDateTime(LocalDateTime.now().plusHours(3))
                 .build();
 

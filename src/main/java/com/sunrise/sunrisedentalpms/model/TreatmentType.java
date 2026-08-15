@@ -2,30 +2,50 @@ package com.sunrise.sunrisedentalpms.model;
 
 import java.math.BigDecimal;
 
-/** Fixed catalogue of treatments offered by the clinic, each with a base cost (LKR). */
-public enum TreatmentType {
-    CONSULTATION("Consultation", new BigDecimal("1000")),
-    SCALING_AND_CLEANING("Scaling and Cleaning", new BigDecimal("3500")),
-    FILLING("Filling", new BigDecimal("5000")),
-    ROOT_CANAL("Root Canal Treatment", new BigDecimal("15000")),
-    EXTRACTION("Tooth Extraction", new BigDecimal("4000")),
-    BRACES_FITTING("Braces Fitting", new BigDecimal("45000")),
-    TEETH_WHITENING("Teeth Whitening", new BigDecimal("12000")),
-    CROWN_FITTING("Crown Fitting", new BigDecimal("18000"));
+/** A treatment type offered by the clinic, with its consultation fee. */
+public class TreatmentType {
 
-    private final String displayName;
-    private final BigDecimal baseCost;
+    private final String treatmentTypeId;
+    private String name;
+    private BigDecimal consultationFee;
 
-    TreatmentType(String displayName, BigDecimal baseCost) {
-        this.displayName = displayName;
-        this.baseCost = baseCost;
+    public TreatmentType(String treatmentTypeId, String name, BigDecimal consultationFee) {
+        if (treatmentTypeId == null || treatmentTypeId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Treatment type ID cannot be empty");
+        }
+        this.treatmentTypeId = treatmentTypeId.trim();
+        setName(name);
+        setConsultationFee(consultationFee);
     }
 
-    public String getDisplayName() {
-        return displayName;
+    public String getTreatmentTypeId() {
+        return treatmentTypeId;
     }
 
-    public BigDecimal getBaseCost() {
-        return baseCost;
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        this.name = name.trim();
+    }
+
+    public BigDecimal getConsultationFee() {
+        return consultationFee;
+    }
+
+    public void setConsultationFee(BigDecimal consultationFee) {
+        if (consultationFee == null || consultationFee.signum() < 0) {
+            throw new IllegalArgumentException("Consultation fee cannot be negative");
+        }
+        this.consultationFee = consultationFee;
+    }
+
+    @Override
+    public String toString() {
+        return "TreatmentType{" + "treatmentTypeId='" + treatmentTypeId + '\'' + ", name='" + name + '\'' + '}';
     }
 }
