@@ -78,7 +78,7 @@ class UserDAOTest {
         assertTrue(staff.stream().allMatch(u -> u.getRole() == UserRole.RECEPTIONIST));
     }
 
-    // Removes the test user directly via SQL, keeping tests repeatable
+
     private void deleteTestUser() {
         String sql = "DELETE FROM users WHERE username = ?";
 

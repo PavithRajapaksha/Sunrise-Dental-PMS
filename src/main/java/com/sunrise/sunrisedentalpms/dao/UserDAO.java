@@ -15,6 +15,7 @@ import java.util.Optional;
 
 public class UserDAO implements UserDAOInterface {
 
+    // Finds a user by username.
     @Override
     public Optional<User> findByUsername(String username) {
         String sql = "SELECT user_id, username, password_hash, full_name, contact_number, role "
@@ -40,12 +41,14 @@ public class UserDAO implements UserDAOInterface {
         return Optional.empty();
     }
 
+    // Check username and password
     @Override
     public Optional<User> authenticate(String username, String plainPassword) {
         return findByUsername(username)
                 .filter(user -> PasswordUtil.matches(plainPassword, user.getHashedPassword()));
     }
 
+    // Creates a new staff account.
     @Override
     public User createStaff(String username, String plainPassword, String fullName, String contactNumber) {
         String sql = "INSERT INTO users (username, password_hash, full_name, contact_number, role) "
@@ -81,6 +84,7 @@ public class UserDAO implements UserDAOInterface {
         return null;
     }
 
+    // Gets all staff accounts.
     @Override
     public List<User> findAllStaff() {
         String sql = "SELECT user_id, username, password_hash, full_name, contact_number, role "
@@ -107,7 +111,7 @@ public class UserDAO implements UserDAOInterface {
         return staffList;
     }
 
-    // Builds a User object from the current row of a ResultSet
+    // Converts a database row into a User object.
     private User mapRow(ResultSet rs) throws SQLException {
         return new User(
                 String.valueOf(rs.getInt("user_id")),
