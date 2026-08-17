@@ -34,6 +34,7 @@ class AppointmentTest {
                 .dentist(dentist)
                 .treatmentType(treatmentType)
                 .appointmentDateTime(dateTime)
+                .bookedByUserId("1")
                 .build();
 
         assertEquals("APT001", appointment.getAppointmentNumber());
@@ -42,6 +43,7 @@ class AppointmentTest {
         assertEquals(treatmentType, appointment.getTreatmentType());
         assertEquals(dateTime, appointment.getAppointmentDateTime());
         assertEquals(AppointmentStatus.SCHEDULED, appointment.getStatus());
+        assertEquals("1", appointment.getBookedByUserId());
     }
 
     @Test
@@ -52,6 +54,7 @@ class AppointmentTest {
                         .dentist(dentist)
                         .treatmentType(treatmentType)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
+                        .bookedByUserId("1")
                         .build());
     }
 
@@ -62,6 +65,7 @@ class AppointmentTest {
                         .dentist(dentist)
                         .treatmentType(treatmentType)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
+                        .bookedByUserId("1")
                         .build());
     }
 
@@ -72,6 +76,7 @@ class AppointmentTest {
                         .patient(patient)
                         .treatmentType(treatmentType)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
+                        .bookedByUserId("1")
                         .build());
     }
 
@@ -82,6 +87,7 @@ class AppointmentTest {
                         .patient(patient)
                         .dentist(dentist)
                         .appointmentDateTime(LocalDateTime.now().plusDays(1))
+                        .bookedByUserId("1")
                         .build());
     }
 
@@ -92,6 +98,18 @@ class AppointmentTest {
                         .patient(patient)
                         .dentist(dentist)
                         .treatmentType(treatmentType)
+                        .bookedByUserId("1")
+                        .build());
+    }
+
+    @Test
+    void rejectsNullBookedByUserId() {
+        assertThrows(NullPointerException.class, () ->
+                new Appointment.Builder("APT008")
+                        .patient(patient)
+                        .dentist(dentist)
+                        .treatmentType(treatmentType)
+                        .appointmentDateTime(LocalDateTime.now().plusHours(1))
                         .build());
     }
 
@@ -102,6 +120,7 @@ class AppointmentTest {
                 .dentist(dentist)
                 .treatmentType(treatmentType)
                 .appointmentDateTime(LocalDateTime.now().plusHours(2))
+                .bookedByUserId("1")
                 .build();
 
         assertEquals(AppointmentStatus.SCHEDULED, appointment.getStatus());
@@ -114,6 +133,7 @@ class AppointmentTest {
                 .dentist(dentist)
                 .treatmentType(treatmentType)
                 .appointmentDateTime(LocalDateTime.now().plusHours(3))
+                .bookedByUserId("1")
                 .build();
 
         appointment.setStatus(AppointmentStatus.CANCELLED);

@@ -1,23 +1,34 @@
 package com.sunrise.sunrisedentalpms.model;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Objects;
 
-/** Invoice generated for an appointment, based on the treatment type's fee. */
 public class Bill {
 
     private final String billId;
-    private Appointment appointment;
-    private final LocalDateTime billDate;
+    private final Appointment appointment;
+    private final BigDecimal totalAmount;
+    private final LocalDate generatedDate;
+    private final String generatedByUserId;
 
-    public Bill(String billId, Appointment appointment, LocalDateTime billDate) {
+    public Bill(String billId, Appointment appointment, BigDecimal totalAmount,
+                LocalDate generatedDate, String generatedByUserId) {
         if (billId == null || billId.trim().isEmpty()) {
             throw new IllegalArgumentException("Bill ID cannot be empty");
         }
+        if (totalAmount == null || totalAmount.signum() < 0) {
+            throw new IllegalArgumentException("Total amount cannot be negative");
+        }
+        if (generatedByUserId == null || generatedByUserId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Generated-by user ID cannot be empty");
+        }
+
         this.billId = billId.trim();
-        setAppointment(appointment);
-        this.billDate = billDate == null ? LocalDateTime.now() : billDate;
+        this.appointment = Objects.requireNonNull(appointment, "Appointment cannot be null");
+        this.totalAmount = totalAmount;
+        this.generatedDate = generatedDate == null ? LocalDate.now() : generatedDate;
+        this.generatedByUserId = generatedByUserId.trim();
     }
 
     public String getBillId() {
@@ -28,20 +39,20 @@ public class Bill {
         return appointment;
     }
 
-    public void setAppointment(Appointment appointment) {
-        this.appointment = Objects.requireNonNull(appointment, "Appointment cannot be null");
-    }
-
-    public LocalDateTime getBillDate() {
-        return billDate;
-    }
-
     public BigDecimal getTotalAmount() {
-        return appointment.getTreatmentType().getConsultationFee();
+        return totalAmount;
+    }
+
+    public LocalDate getGeneratedDate() {
+        return generatedDate;
+    }
+
+    public String getGeneratedByUserId() {
+        return generatedByUserId;
     }
 
     @Override
     public String toString() {
-        return "Bill{" + "billId='" + billId + '\'' + ", total=" + getTotalAmount() + '}';
+        return "Bill{" + "billId='" + billId + '\'' + ", total=" + totalAmount + '}';
     }
 }

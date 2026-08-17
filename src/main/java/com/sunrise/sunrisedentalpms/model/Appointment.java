@@ -12,6 +12,7 @@ public class Appointment {
     private TreatmentType treatmentType;
     private LocalDateTime appointmentDateTime;
     private AppointmentStatus status;
+    private String bookedByUserId;
 
     private Appointment(Builder builder) {
         this.appointmentNumber = Objects.requireNonNull(builder.appointmentNumber, "Appointment number cannot be null");
@@ -20,6 +21,7 @@ public class Appointment {
         this.treatmentType = Objects.requireNonNull(builder.treatmentType, "Treatment type cannot be null");
         this.appointmentDateTime = Objects.requireNonNull(builder.appointmentDateTime, "Appointment date/time cannot be null");
         this.status = Objects.requireNonNull(builder.status, "Status cannot be null");
+        this.bookedByUserId = Objects.requireNonNull(builder.bookedByUserId, "Booked-by user ID cannot be null");
     }
 
     // getters
@@ -45,6 +47,10 @@ public class Appointment {
 
     public AppointmentStatus getStatus() {
         return status;
+    }
+
+    public String getBookedByUserId() {
+        return bookedByUserId;
     }
 
     // setters
@@ -84,6 +90,7 @@ public class Appointment {
         private TreatmentType treatmentType;
         private LocalDateTime appointmentDateTime;
         private AppointmentStatus status = AppointmentStatus.SCHEDULED;
+        private String bookedByUserId;
 
         public Builder(String appointmentNumber) {
             this.appointmentNumber = appointmentNumber;
@@ -111,6 +118,11 @@ public class Appointment {
 
         public Builder status(AppointmentStatus status) {
             this.status = status;
+            return this;
+        }
+
+        public Builder bookedByUserId(String bookedByUserId) {
+            this.bookedByUserId = bookedByUserId;
             return this;
         }
 
