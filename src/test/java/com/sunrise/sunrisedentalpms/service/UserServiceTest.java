@@ -1,6 +1,7 @@
 package com.sunrise.sunrisedentalpms.service;
 
 import com.sunrise.sunrisedentalpms.dao.UserDAOInterface;
+import com.sunrise.sunrisedentalpms.exception.AuthorizationException;
 import com.sunrise.sunrisedentalpms.exception.RecordNotFoundException;
 import com.sunrise.sunrisedentalpms.exception.ValidationException;
 import com.sunrise.sunrisedentalpms.model.User;
@@ -16,6 +17,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,10 +38,10 @@ class UserServiceTest {
     }
 
     @Test
-    void Register_withValidData_shouldReturnUser() throws ValidationException {
+    void Register_withValidData_shouldReturnUser() throws ValidationException, AuthorizationException {
         when(userDao.createStaff("jdoe", "pass1234", "Jane Doe", "0711234567")).thenReturn(sampleUser);
 
-        User result = userService.registerUser("jdoe", "pass1234", "Jane Doe", "0711234567");
+        User result = userService.registerUser("jdoe", "pass1234", "Jane Doe", "0711234567", UserRole.ADMIN);
 
         assertEquals(sampleUser, result);
     }
@@ -47,7 +51,7 @@ class UserServiceTest {
         when(userDao.createStaff("jdoe", "pass1234", "Jane Doe", "0711234567")).thenReturn(null);
 
         assertThrows(ValidationException.class,
-                () -> userService.registerUser("jdoe", "pass1234", "Jane Doe", "0711234567"));
+                () -> userService.registerUser("jdoe", "pass1234", "Jane Doe", "0711234567", UserRole.ADMIN));
     }
 
     @Test
@@ -56,7 +60,15 @@ class UserServiceTest {
                 .thenThrow(new IllegalArgumentException("Username must be at least 4 characters"));
 
         assertThrows(ValidationException.class,
-                () -> userService.registerUser("bad", "pass1234", "Jane Doe", "0711234567"));
+                () -> userService.registerUser("bad", "pass1234", "Jane Doe", "0711234567", UserRole.ADMIN));
+    }
+
+    @Test
+    void Register_withNonAdminRole_shouldFail() {
+        assertThrows(AuthorizationException.class,
+                () -> userService.registerUser("jdoe", "pass1234", "Jane Doe", "0711234567", UserRole.RECEPTIONIST));
+
+        verify(userDao, never()).createStaff(anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

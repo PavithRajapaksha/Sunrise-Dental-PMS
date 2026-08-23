@@ -1,9 +1,11 @@
 package com.sunrise.sunrisedentalpms.service;
 
 import com.sunrise.sunrisedentalpms.dao.UserDAOInterface;
+import com.sunrise.sunrisedentalpms.exception.AuthorizationException;
 import com.sunrise.sunrisedentalpms.exception.RecordNotFoundException;
 import com.sunrise.sunrisedentalpms.exception.ValidationException;
 import com.sunrise.sunrisedentalpms.model.User;
+import com.sunrise.sunrisedentalpms.model.UserRole;
 
 import java.util.List;
 import java.util.Objects;
@@ -17,9 +19,14 @@ public class UserService implements UserServiceInterface {
         this.userDao = Objects.requireNonNull(userDao, "UserDAOInterface cannot be null");
     }
 
-    // Creates a new user
+    // Creates a user account
     @Override
-    public User registerUser(String username, String plainPassword, String fullName, String contactNumber) throws ValidationException {
+    public User registerUser(String username, String plainPassword, String fullName, String contactNumber, UserRole requestingUserRole)
+            throws ValidationException, AuthorizationException {
+        if (requestingUserRole != UserRole.ADMIN) {
+            throw new AuthorizationException("Only an admin can create staff accounts.");
+        }
+
         try {
             User created = userDao.createStaff(username, plainPassword, fullName, contactNumber);
 
@@ -33,12 +40,14 @@ public class UserService implements UserServiceInterface {
         }
     }
 
+    // Finds a user by username
     @Override
     public User findUserByUsername(String username) throws RecordNotFoundException {
         Optional<User> user = userDao.findByUsername(username);
         return user.orElseThrow(() -> new RecordNotFoundException("No user account found with username " + username));
     }
 
+    // Lists every user account
     @Override
     public List<User> listAllUsers() {
         return userDao.findAllStaff();

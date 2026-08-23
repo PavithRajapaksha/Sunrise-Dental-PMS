@@ -1,10 +1,12 @@
 package com.sunrise.sunrisedentalpms.service;
 
 import com.sunrise.sunrisedentalpms.dao.DentistDAOInterface;
+import com.sunrise.sunrisedentalpms.exception.AuthorizationException;
 import com.sunrise.sunrisedentalpms.exception.RecordNotFoundException;
 import com.sunrise.sunrisedentalpms.exception.ValidationException;
 import com.sunrise.sunrisedentalpms.model.Dentist;
 import com.sunrise.sunrisedentalpms.model.DentistStatus;
+import com.sunrise.sunrisedentalpms.model.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +19,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,10 +40,10 @@ class DentistServiceTest {
     }
 
     @Test
-    void Register_withValidData_shouldReturnDentist() throws ValidationException {
+    void Register_withValidData_shouldReturnDentist() throws ValidationException, AuthorizationException {
         when(dentistDao.createDentist("Dr. Perera", "0711234567")).thenReturn(sampleDentist);
 
-        Dentist result = dentistService.registerDentist("Dr. Perera", "0711234567");
+        Dentist result = dentistService.registerDentist("Dr. Perera", "0711234567", UserRole.ADMIN);
 
         assertEquals(sampleDentist, result);
     }
@@ -48,7 +53,15 @@ class DentistServiceTest {
         when(dentistDao.createDentist("", "bad-number")).thenReturn(null);
 
         assertThrows(ValidationException.class,
-                () -> dentistService.registerDentist("", "bad-number"));
+                () -> dentistService.registerDentist("", "bad-number", UserRole.ADMIN));
+    }
+
+    @Test
+    void Register_withNonAdminRole_shouldFail() {
+        assertThrows(AuthorizationException.class,
+                () -> dentistService.registerDentist("Dr. Perera", "0711234567", UserRole.RECEPTIONIST));
+
+        verify(dentistDao, never()).createDentist(anyString(), anyString());
     }
 
     @Test

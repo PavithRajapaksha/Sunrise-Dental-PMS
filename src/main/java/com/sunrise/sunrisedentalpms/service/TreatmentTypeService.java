@@ -1,9 +1,11 @@
 package com.sunrise.sunrisedentalpms.service;
 
 import com.sunrise.sunrisedentalpms.dao.TreatmentTypeDAOInterface;
+import com.sunrise.sunrisedentalpms.exception.AuthorizationException;
 import com.sunrise.sunrisedentalpms.exception.RecordNotFoundException;
 import com.sunrise.sunrisedentalpms.exception.ValidationException;
 import com.sunrise.sunrisedentalpms.model.TreatmentType;
+import com.sunrise.sunrisedentalpms.model.UserRole;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,13 +20,18 @@ public class TreatmentTypeService implements TreatmentTypeServiceInterface {
         this.treatmentTypeDao = Objects.requireNonNull(treatmentTypeDao, "TreatmentTypeDAOInterface cannot be null");
     }
 
-    // Add a new treatment type
+    // Adds a new treatment type
     @Override
-    public TreatmentType registerTreatmentType(String name, BigDecimal consultationFee) throws ValidationException {
+    public TreatmentType addTreatmentType(String name, BigDecimal consultationFee, UserRole requestingUserRole)
+            throws ValidationException, AuthorizationException {
+        if (requestingUserRole != UserRole.ADMIN) {
+            throw new AuthorizationException("Only an admin can add a new treatment type.");
+        }
+
         TreatmentType created = treatmentTypeDao.createTreatmentType(name, consultationFee);
 
         if (created == null) {
-            throw new ValidationException("Could not register treatment type. Check the name and fee.");
+            throw new ValidationException("Could not add treatment type. Check the name and fee.");
         }
 
         return created;
@@ -43,9 +50,14 @@ public class TreatmentTypeService implements TreatmentTypeServiceInterface {
         return treatmentTypeDao.findAll();
     }
 
-    // Updates the consultation fee for a treatment type
+    // Updates a treatment type's consultation fee
     @Override
-    public void updateConsultationFee(String treatmentTypeId, BigDecimal newFee) throws RecordNotFoundException {
+    public void updateConsultationFee(String treatmentTypeId, BigDecimal newFee, UserRole requestingUserRole)
+            throws RecordNotFoundException, AuthorizationException {
+        if (requestingUserRole != UserRole.ADMIN) {
+            throw new AuthorizationException("Only an admin can update a consultation fee.");
+        }
+
         boolean updated = treatmentTypeDao.updateConsultationFee(treatmentTypeId, newFee);
 
         if (!updated) {
