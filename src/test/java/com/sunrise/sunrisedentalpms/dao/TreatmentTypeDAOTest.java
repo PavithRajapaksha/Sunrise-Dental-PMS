@@ -1,18 +1,26 @@
 package com.sunrise.sunrisedentalpms.dao;
 
-import com.sunrise.sunrisedentalpms.model.TreatmentType;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import com.sunrise.sunrisedentalpms.model.TreatmentType;
 
 class TreatmentTypeDAOTest {
 
@@ -21,19 +29,39 @@ class TreatmentTypeDAOTest {
 
     private TreatmentTypeDAOInterface treatmentTypeDao;
 
+    private Connection connection;
+    private PreparedStatement preparedStatement;
+    private ResultSet resultSet;
+
+    private MockedStatic<DBConnection> dbConnectionMock;
+
     @BeforeEach
     void setUp() {
+        connection = mock(Connection.class);
+        preparedStatement = mock(PreparedStatement.class);
+        resultSet = mock(ResultSet.class);
+
+        DBConnection mockDbConnection = mock(DBConnection.class);
+        dbConnectionMock = mockStatic(DBConnection.class);
+        dbConnectionMock.when(DBConnection::getInstance).thenReturn(mockDbConnection);
+        when(mockDbConnection.getConnection()).thenReturn(connection);
+
         treatmentTypeDao = new TreatmentTypeDAO();
-        deleteTestTreatmentType();
     }
 
     @AfterEach
     void tearDown() {
-        deleteTestTreatmentType();
+        dbConnectionMock.close();
     }
 
     @Test
-    void createTreatmentType_ShouldInsertTreatmentTypeRecord() {
+    void createTreatmentType_ShouldInsertTreatmentTypeRecord() throws Exception {
+        when(connection.prepareStatement(anyString(), eq(Statement.RETURN_GENERATED_KEYS)))
+                .thenReturn(preparedStatement);
+        when(preparedStatement.getGeneratedKeys()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getInt(1)).thenReturn(1);
+
         TreatmentType created = treatmentTypeDao.createTreatmentType(TEST_NAME, TEST_FEE);
 
         assertNotNull(created);
@@ -42,18 +70,24 @@ class TreatmentTypeDAOTest {
     }
 
     @Test
-    void findById_ShouldReturnCreatedTreatmentType() {
-        TreatmentType created = treatmentTypeDao.createTreatmentType(TEST_NAME, TEST_FEE);
+    void findById_ShouldReturnCreatedTreatmentType() throws Exception {
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        stubTreatmentTypeColumns(1, TEST_FEE);
 
-        Optional<TreatmentType> found = treatmentTypeDao.findById(created.getTreatmentTypeId());
+        Optional<TreatmentType> found = treatmentTypeDao.findById("1");
 
         assertTrue(found.isPresent());
-        assertEquals(created.getTreatmentTypeId(), found.get().getTreatmentTypeId());
+        assertEquals("1", found.get().getTreatmentTypeId());
     }
 
     @Test
-    void findAll_ShouldIncludeCreatedTreatmentType() {
-        treatmentTypeDao.createTreatmentType(TEST_NAME, TEST_FEE);
+    void findAll_ShouldIncludeCreatedTreatmentType() throws Exception {
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true, false);
+        stubTreatmentTypeColumns(1, TEST_FEE);
 
         List<TreatmentType> allTreatmentTypes = treatmentTypeDao.findAll();
 
@@ -62,48 +96,40 @@ class TreatmentTypeDAOTest {
     }
 
     @Test
-    void updateConsultationFee_ShouldChangeFee() {
-        TreatmentType created = treatmentTypeDao.createTreatmentType(TEST_NAME, TEST_FEE);
+    void updateConsultationFee_ShouldChangeFee() throws Exception {
         BigDecimal newFee = new BigDecimal("3000.00");
 
-        boolean updated = treatmentTypeDao.updateConsultationFee(created.getTreatmentTypeId(), newFee);
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeUpdate()).thenReturn(1);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        stubTreatmentTypeColumns(1, newFee);
+
+        boolean updated = treatmentTypeDao.updateConsultationFee("1", newFee);
 
         assertTrue(updated);
 
-        Optional<TreatmentType> found = treatmentTypeDao.findById(created.getTreatmentTypeId());
+        Optional<TreatmentType> found = treatmentTypeDao.findById("1");
         assertTrue(found.isPresent());
         assertEquals(0, newFee.compareTo(found.get().getConsultationFee()));
     }
 
     @Test
     void updateConsultationFee_WithNegativeFee_ShouldReturnFalse() {
-        TreatmentType created = treatmentTypeDao.createTreatmentType(TEST_NAME, TEST_FEE);
-
-        boolean updated = treatmentTypeDao.updateConsultationFee(created.getTreatmentTypeId(), new BigDecimal("-100"));
-
+        // validated before any database call is made, so no stubbing is needed
+        boolean updated = treatmentTypeDao.updateConsultationFee("1", new BigDecimal("-100"));
         assertFalse(updated);
     }
 
     @Test
     void updateConsultationFee_WithInvalidId_ShouldReturnFalse() {
         boolean updated = treatmentTypeDao.updateConsultationFee("not-a-number", TEST_FEE);
-
         assertFalse(updated);
     }
 
-    // Removes the test treatment type directly via SQL, keeping tests repeatable
-    private void deleteTestTreatmentType() {
-        String sql = "DELETE FROM treatment_type WHERE name = ?";
-
-        Connection conn = DBConnection.getInstance().getConnection();
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, TEST_NAME);
-            stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to clean up test data", e);
-        }
+    private void stubTreatmentTypeColumns(int treatmentTypeId, BigDecimal fee) throws Exception {
+        when(resultSet.getInt("treatment_type_id")).thenReturn(treatmentTypeId);
+        when(resultSet.getString("name")).thenReturn(TEST_NAME);
+        when(resultSet.getBigDecimal("consultation_fee")).thenReturn(fee);
     }
 }

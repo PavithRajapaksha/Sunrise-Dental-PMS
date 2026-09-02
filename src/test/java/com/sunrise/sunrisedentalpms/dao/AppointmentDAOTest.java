@@ -1,88 +1,119 @@
 package com.sunrise.sunrisedentalpms.dao;
 
-import com.sunrise.sunrisedentalpms.model.Appointment;
-import com.sunrise.sunrisedentalpms.model.AppointmentStatus;
-import com.sunrise.sunrisedentalpms.model.Dentist;
-import com.sunrise.sunrisedentalpms.model.Patient;
-import com.sunrise.sunrisedentalpms.model.TreatmentType;
-import com.sunrise.sunrisedentalpms.model.User;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Time;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import com.sunrise.sunrisedentalpms.model.Appointment;
+import com.sunrise.sunrisedentalpms.model.AppointmentStatus;
+import com.sunrise.sunrisedentalpms.model.Dentist;
+import com.sunrise.sunrisedentalpms.model.DentistStatus;
+import com.sunrise.sunrisedentalpms.model.Patient;
+import com.sunrise.sunrisedentalpms.model.TreatmentType;
 
 class AppointmentDAOTest {
-
-    private static final String TEST_PATIENT_CONTACT = "0770000333";
-    private static final String TEST_DENTIST_CONTACT = "0770000444";
-    private static final String TEST_STAFF_CONTACT = "0770000555";
-    private static final String TEST_TREATMENT_NAME = "Test Appointment Treatment";
-    private static final String TEST_STAFF_USERNAME = "test_apt_staff";
-    private static final String TEST_STAFF_PASSWORD = "TestPass123";
 
     private AppointmentDAOInterface appointmentDao;
 
     private Patient testPatient;
     private Dentist testDentist;
     private TreatmentType testTreatmentType;
-    private User testStaff;
+
+    private Connection connection;
+    private PreparedStatement preparedStatement;
+    private ResultSet resultSet;
+
+    private MockedStatic<DBConnection> dbConnectionMock;
 
     @BeforeEach
     void setUp() {
+        connection = mock(Connection.class);
+        preparedStatement = mock(PreparedStatement.class);
+        resultSet = mock(ResultSet.class);
+
+        DBConnection mockDbConnection = mock(DBConnection.class);
+        dbConnectionMock = mockStatic(DBConnection.class);
+        dbConnectionMock.when(DBConnection::getInstance).thenReturn(mockDbConnection);
+        when(mockDbConnection.getConnection()).thenReturn(connection);
+
         appointmentDao = new AppointmentDAO();
 
-        deleteTestData();
-
-        testPatient = new PatientDAO().createPatient("Test Patient", "123 Test Lane", TEST_PATIENT_CONTACT);
-        testDentist = new DentistDAO().createDentist("Test Dentist", TEST_DENTIST_CONTACT);
-        testTreatmentType = new TreatmentTypeDAO().createTreatmentType(TEST_TREATMENT_NAME, new BigDecimal("2000.00"));
-        testStaff = new UserDAO().createStaff(TEST_STAFF_USERNAME, TEST_STAFF_PASSWORD, "Test Staff", TEST_STAFF_CONTACT);
+        testPatient = new Patient("1", "Test Patient", "123 Test Lane", "0770000333");
+        testDentist = new Dentist("2", "Test Dentist", "0770000444");
+        testTreatmentType = new TreatmentType("3", "Test Appointment Treatment", new BigDecimal("2000.00"));
     }
 
     @AfterEach
     void tearDown() {
-        deleteTestData();
+        dbConnectionMock.close();
     }
 
     @Test
-    void createAppointment_ShouldInsertAppointmentWithScheduledStatus() {
+    void createAppointment_ShouldInsertAppointmentWithScheduledStatus() throws Exception {
         LocalDateTime dateTime = testDateTime(1);
 
+        when(connection.prepareStatement(anyString(), eq(Statement.RETURN_GENERATED_KEYS)))
+                .thenReturn(preparedStatement);
+        when(preparedStatement.getGeneratedKeys()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getInt(1)).thenReturn(10);
+
         Appointment created = appointmentDao.createAppointment(
-                testPatient, testDentist, testTreatmentType, dateTime, testStaff.getUserId());
+                testPatient, testDentist, testTreatmentType, dateTime, "4");
 
         assertNotNull(created);
         assertEquals(AppointmentStatus.SCHEDULED, created.getStatus());
-        assertEquals(testStaff.getUserId(), created.getBookedByUserId());
+        assertEquals("4", created.getBookedByUserId());
+
+        verify(preparedStatement).setInt(1, 1);
+        verify(preparedStatement).setInt(2, 2);
+        verify(preparedStatement).setInt(3, 3);
+        verify(preparedStatement).setInt(4, 4);
+        verify(preparedStatement).setString(7, "SCHEDULED");
     }
 
     @Test
-    void findByAppointmentNumber_ShouldReturnCreatedAppointment() {
-        Appointment created = appointmentDao.createAppointment(
-                testPatient, testDentist, testTreatmentType, testDateTime(2), testStaff.getUserId());
+    void findByAppointmentNumber_ShouldReturnCreatedAppointment() throws Exception {
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        stubAppointmentColumns(2, testDateTime(2));
 
-        Optional<Appointment> found = appointmentDao.findByAppointmentNumber(created.getAppointmentNumber());
+        Optional<Appointment> found = appointmentDao.findByAppointmentNumber("2");
 
         assertTrue(found.isPresent());
-        assertEquals(created.getAppointmentNumber(), found.get().getAppointmentNumber());
+        assertEquals("2", found.get().getAppointmentNumber());
         assertEquals(testPatient.getPatientId(), found.get().getPatient().getPatientId());
         assertEquals(testDentist.getDentistId(), found.get().getDentist().getDentistId());
         assertEquals(testTreatmentType.getTreatmentTypeId(), found.get().getTreatmentType().getTreatmentTypeId());
     }
 
     @Test
-    void findByPatientId_ShouldReturnAppointmentsForThatPatient() {
-        appointmentDao.createAppointment(
-                testPatient, testDentist, testTreatmentType, testDateTime(3), testStaff.getUserId());
+    void findByPatientId_ShouldReturnAppointmentsForThatPatient() throws Exception {
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true, false);
+        stubAppointmentColumns(3, testDateTime(3));
 
         List<Appointment> results = appointmentDao.findByPatientId(testPatient.getPatientId());
 
@@ -92,26 +123,32 @@ class AppointmentDAOTest {
     }
 
     @Test
-    void findAll_ShouldIncludeCreatedAppointment() {
-        Appointment created = appointmentDao.createAppointment(
-                testPatient, testDentist, testTreatmentType, testDateTime(4), testStaff.getUserId());
+    void findAll_ShouldIncludeCreatedAppointment() throws Exception {
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true, false);
+        stubAppointmentColumns(4, testDateTime(4));
 
         List<Appointment> all = appointmentDao.findAll();
 
         assertTrue(all.stream()
-                .anyMatch(a -> a.getAppointmentNumber().equals(created.getAppointmentNumber())));
+                .anyMatch(a -> a.getAppointmentNumber().equals("4")));
     }
 
     @Test
-    void updateStatus_ShouldChangeAppointmentStatus() {
-        Appointment created = appointmentDao.createAppointment(
-                testPatient, testDentist, testTreatmentType, testDateTime(5), testStaff.getUserId());
+    void updateStatus_ShouldChangeAppointmentStatus() throws Exception {
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeUpdate()).thenReturn(1);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        stubAppointmentColumns(5, testDateTime(5));
+        when(resultSet.getString("status")).thenReturn(AppointmentStatus.COMPLETED.name());
 
-        boolean updated = appointmentDao.updateStatus(created.getAppointmentNumber(), AppointmentStatus.COMPLETED);
+        boolean updated = appointmentDao.updateStatus("5", AppointmentStatus.COMPLETED);
 
         assertTrue(updated);
 
-        Optional<Appointment> found = appointmentDao.findByAppointmentNumber(created.getAppointmentNumber());
+        Optional<Appointment> found = appointmentDao.findByAppointmentNumber("5");
         assertTrue(found.isPresent());
         assertEquals(AppointmentStatus.COMPLETED, found.get().getStatus());
     }
@@ -119,7 +156,6 @@ class AppointmentDAOTest {
     @Test
     void updateStatus_WithInvalidAppointmentNumber_ShouldReturnFalse() {
         boolean updated = appointmentDao.updateStatus("not-a-number", AppointmentStatus.CANCELLED);
-
         assertFalse(updated);
     }
 
@@ -129,45 +165,25 @@ class AppointmentDAOTest {
         return LocalDateTime.now().plusDays(daysFromNow).withNano(0);
     }
 
-    // Deletes appointment rows first (FK constraint), then the patient/dentist/
-    // treatment type/staff rows they depend on, so tests stay repeatable
-    private void deleteTestData() {
-        Connection conn = DBConnection.getInstance().getConnection();
+    private void stubAppointmentColumns(int appointmentNo, LocalDateTime dateTime) throws Exception {
+        when(resultSet.getInt("appointment_no")).thenReturn(appointmentNo);
+        when(resultSet.getDate("appointment_date")).thenReturn(Date.valueOf(dateTime.toLocalDate()));
+        when(resultSet.getTime("appointment_time")).thenReturn(Time.valueOf(dateTime.toLocalTime()));
+        when(resultSet.getString("status")).thenReturn(AppointmentStatus.SCHEDULED.name());
+        when(resultSet.getInt("user_id")).thenReturn(4);
 
-        try (PreparedStatement deleteAppointments = conn.prepareStatement(
-                "DELETE a FROM appointment a JOIN patient p ON a.patient_id = p.patient_id WHERE p.contact_number = ?")) {
-            deleteAppointments.setString(1, TEST_PATIENT_CONTACT);
-            deleteAppointments.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to clean up test appointments", e);
-        }
+        when(resultSet.getInt("patient_id")).thenReturn(Integer.parseInt(testPatient.getPatientId()));
+        when(resultSet.getString("patient_name")).thenReturn(testPatient.getName());
+        when(resultSet.getString("patient_address")).thenReturn(testPatient.getAddress());
+        when(resultSet.getString("patient_contact")).thenReturn(testPatient.getContactNumber());
 
-        try (PreparedStatement deletePatient = conn.prepareStatement("DELETE FROM patient WHERE contact_number = ?")) {
-            deletePatient.setString(1, TEST_PATIENT_CONTACT);
-            deletePatient.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to clean up test patient", e);
-        }
+        when(resultSet.getInt("dentist_id")).thenReturn(Integer.parseInt(testDentist.getDentistId()));
+        when(resultSet.getString("dentist_name")).thenReturn(testDentist.getName());
+        when(resultSet.getString("dentist_contact")).thenReturn(testDentist.getContactNumber());
+        when(resultSet.getString("dentist_status")).thenReturn(DentistStatus.AVAILABLE.name());
 
-        try (PreparedStatement deleteDentist = conn.prepareStatement("DELETE FROM dentist WHERE contact_number = ?")) {
-            deleteDentist.setString(1, TEST_DENTIST_CONTACT);
-            deleteDentist.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to clean up test dentist", e);
-        }
-
-        try (PreparedStatement deleteTreatmentType = conn.prepareStatement("DELETE FROM treatment_type WHERE name = ?")) {
-            deleteTreatmentType.setString(1, TEST_TREATMENT_NAME);
-            deleteTreatmentType.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to clean up test treatment type", e);
-        }
-
-        try (PreparedStatement deleteStaff = conn.prepareStatement("DELETE FROM users WHERE username = ?")) {
-            deleteStaff.setString(1, TEST_STAFF_USERNAME);
-            deleteStaff.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to clean up test staff", e);
-        }
+        when(resultSet.getInt("treatment_type_id")).thenReturn(Integer.parseInt(testTreatmentType.getTreatmentTypeId()));
+        when(resultSet.getString("treatment_name")).thenReturn(testTreatmentType.getName());
+        when(resultSet.getBigDecimal("treatment_fee")).thenReturn(testTreatmentType.getConsultationFee());
     }
 }
