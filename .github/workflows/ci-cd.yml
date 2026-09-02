@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+  pull_request:
+    branches:
+      - dev
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Run non-database automated tests
+        run: mvn -B "-Dtest=*ServiceTest,*ControllerTest,AppointmentTest" test
+
+      - name: Build WAR
+        run: mvn -B -DskipTests package
+
+      - name: Upload WAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunrise-dental-pms-war
+          path: target/*.war
+          if-no-files-found: error
+
+
+  release:
+    name: Create Release
+    needs: build-and-test
+
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Download tested WAR
+        uses: actions/download-artifact@v4
+        with:
+          name: sunrise-dental-pms-war
+          path: release-artifact
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          files: release-artifact/*.war
