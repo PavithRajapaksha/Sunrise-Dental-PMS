@@ -28,6 +28,7 @@ class PatientDAOTest {
     private static final String TEST_CONTACT_NUMBER = "0770000111";
     private static final String TEST_NAME = "Test Patient";
     private static final String TEST_ADDRESS = "123 Test Lane, Colombo";
+    private static final String TEST_EMAIL = "test.patient@example.com";
 
     private PatientDAOInterface patientDao;
 
@@ -64,16 +65,18 @@ class PatientDAOTest {
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getInt(1)).thenReturn(1);
 
-        Patient created = patientDao.createPatient(TEST_NAME, TEST_ADDRESS, TEST_CONTACT_NUMBER);
+        Patient created = patientDao.createPatient(TEST_NAME, TEST_ADDRESS, TEST_CONTACT_NUMBER, TEST_EMAIL);
 
         assertNotNull(created);
         assertEquals(TEST_NAME, created.getName());
         assertEquals(TEST_ADDRESS, created.getAddress());
         assertEquals(TEST_CONTACT_NUMBER, created.getContactNumber());
+        assertEquals(TEST_EMAIL, created.getEmail());
 
         verify(preparedStatement).setString(1, TEST_NAME);
         verify(preparedStatement).setString(2, TEST_ADDRESS);
         verify(preparedStatement).setString(3, TEST_CONTACT_NUMBER);
+        verify(preparedStatement).setString(4, TEST_EMAIL);
     }
 
     @Test
@@ -159,5 +162,6 @@ class PatientDAOTest {
         when(resultSet.getString("name")).thenReturn(TEST_NAME);
         when(resultSet.getString("address")).thenReturn(TEST_ADDRESS);
         when(resultSet.getString("contact_number")).thenReturn(TEST_CONTACT_NUMBER);
+        when(resultSet.getString("email")).thenReturn(TEST_EMAIL);
     }
 }

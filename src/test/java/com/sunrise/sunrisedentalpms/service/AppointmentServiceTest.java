@@ -35,6 +35,9 @@ class AppointmentServiceTest {
     @Mock
     private AppointmentDAOInterface appointmentDao;
 
+    @Mock
+    private Notifier notifier;
+
     private AppointmentService appointmentService;
     private Patient samplePatient;
     private Dentist sampleDentist;
@@ -43,7 +46,7 @@ class AppointmentServiceTest {
 
     @BeforeEach
     void setUp() {
-        appointmentService = new AppointmentService(appointmentDao);
+        appointmentService = new AppointmentService(appointmentDao, notifier);
         samplePatient = new Patient("1", "Kasun Silva", "12 Galle Road, Colombo", "0711234567");
         sampleDentist = new Dentist("1", "Dr. Perera", "0711234567");
         sampleTreatmentType = new TreatmentType("1", "Root Canal", new BigDecimal("15000.00"));

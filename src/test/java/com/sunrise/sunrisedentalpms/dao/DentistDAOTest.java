@@ -27,6 +27,7 @@ class DentistDAOTest {
 
     private static final String TEST_CONTACT_NUMBER = "0770000222";
     private static final String TEST_NAME = "Test Dentist";
+    private static final String TEST_EMAIL = "test.dentist@example.com";
 
     private DentistDAOInterface dentistDao;
 
@@ -63,7 +64,7 @@ class DentistDAOTest {
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getInt(1)).thenReturn(1);
 
-        Dentist created = dentistDao.createDentist(TEST_NAME, TEST_CONTACT_NUMBER);
+        Dentist created = dentistDao.createDentist(TEST_NAME, TEST_CONTACT_NUMBER, TEST_EMAIL);
 
         assertNotNull(created);
         assertEquals(TEST_NAME, created.getName());
@@ -72,7 +73,8 @@ class DentistDAOTest {
 
         verify(preparedStatement).setString(1, TEST_NAME);
         verify(preparedStatement).setString(2, TEST_CONTACT_NUMBER);
-        verify(preparedStatement).setString(3, "AVAILABLE");
+        verify(preparedStatement).setString(3, TEST_EMAIL);
+        verify(preparedStatement).setString(4, "AVAILABLE");
     }
 
     @Test
@@ -157,6 +159,7 @@ class DentistDAOTest {
         when(resultSet.getInt("dentist_id")).thenReturn(dentistId);
         when(resultSet.getString("name")).thenReturn(TEST_NAME);
         when(resultSet.getString("contact_number")).thenReturn(TEST_CONTACT_NUMBER);
+        when(resultSet.getString("email")).thenReturn(TEST_EMAIL);
         when(resultSet.getString("status")).thenReturn(status.name());
     }
 }

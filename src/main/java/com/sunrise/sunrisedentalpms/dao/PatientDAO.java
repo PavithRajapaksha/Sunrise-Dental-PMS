@@ -13,10 +13,10 @@ import java.util.Optional;
 
 public class PatientDAO implements PatientDAOInterface {
 
-    // Creates a new patient record
+    // Register new patient
     @Override
-    public Patient createPatient(String name, String address, String contactNumber) {
-        String sql = "INSERT INTO patient (name, address, contact_number) VALUES (?, ?, ?)";
+    public Patient createPatient(String name, String address, String contactNumber, String email) {
+        String sql = "INSERT INTO patient (name, address, contact_number, email) VALUES (?, ?, ?, ?)";
 
         Connection conn = DBConnection.getInstance().getConnection();
 
@@ -25,13 +25,16 @@ public class PatientDAO implements PatientDAOInterface {
             stmt.setString(1, name);
             stmt.setString(2, address);
             stmt.setString(3, contactNumber);
+            stmt.setString(4, email);
 
             stmt.executeUpdate();
 
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     String generatedId = String.valueOf(keys.getInt(1));
-                    return new Patient(generatedId, name, address, contactNumber);
+                    Patient created = new Patient(generatedId, name, address, contactNumber);
+                    created.setEmail(email);
+                    return created;
                 }
             }
 
@@ -43,7 +46,7 @@ public class PatientDAO implements PatientDAOInterface {
         return null;
     }
 
-    // Finds a patient by ID
+    // Find a patient by ID
     @Override
     public Optional<Patient> findById(String patientId) {
         int id;
@@ -53,7 +56,7 @@ public class PatientDAO implements PatientDAOInterface {
             return Optional.empty();
         }
 
-        String sql = "SELECT patient_id, name, address, contact_number FROM patient WHERE patient_id = ?";
+        String sql = "SELECT patient_id, name, address, contact_number, email FROM patient WHERE patient_id = ?";
 
         Connection conn = DBConnection.getInstance().getConnection();
 
@@ -78,7 +81,7 @@ public class PatientDAO implements PatientDAOInterface {
     // Finds a patient by contact number
     @Override
     public Optional<Patient> findByContactNumber(String contactNumber) {
-        String sql = "SELECT patient_id, name, address, contact_number FROM patient WHERE contact_number = ?";
+        String sql = "SELECT patient_id, name, address, contact_number, email FROM patient WHERE contact_number = ?";
 
         Connection conn = DBConnection.getInstance().getConnection();
 
@@ -100,10 +103,10 @@ public class PatientDAO implements PatientDAOInterface {
         return Optional.empty();
     }
 
-    // Retrieves all patients
+    // get all patients
     @Override
     public List<Patient> findAll() {
-        String sql = "SELECT patient_id, name, address, contact_number FROM patient ORDER BY name";
+        String sql = "SELECT patient_id, name, address, contact_number, email FROM patient ORDER BY name";
 
         List<Patient> patients = new ArrayList<>();
         Connection conn = DBConnection.getInstance().getConnection();
@@ -124,20 +127,21 @@ public class PatientDAO implements PatientDAOInterface {
         return patients;
     }
 
-    // Finds an existing patient or creates one
+    // find or create new patient
     @Override
     public Patient findOrCreate(String name, String address, String contactNumber) {
         return findByContactNumber(contactNumber)
-                .orElseGet(() -> createPatient(name, address, contactNumber));
+                .orElseGet(() -> createPatient(name, address, contactNumber, null));
     }
 
-    // Builds a Patient object from the current row of a ResultSet
     private Patient mapRow(ResultSet rs) throws SQLException {
-        return new Patient(
+        Patient patient = new Patient(
                 String.valueOf(rs.getInt("patient_id")),
                 rs.getString("name"),
                 rs.getString("address"),
                 rs.getString("contact_number")
         );
+        patient.setEmail(rs.getString("email"));
+        return patient;
     }
 }

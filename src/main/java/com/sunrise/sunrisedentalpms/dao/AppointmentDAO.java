@@ -23,8 +23,8 @@ public class AppointmentDAO implements AppointmentDAOInterface {
 
     private static final String BASE_SELECT =
             "SELECT a.appointment_no, a.appointment_date, a.appointment_time, a.status, a.user_id, "
-                    + "p.patient_id, p.name AS patient_name, p.address AS patient_address, p.contact_number AS patient_contact, "
-                    + "d.dentist_id, d.name AS dentist_name, d.contact_number AS dentist_contact, d.status AS dentist_status, "
+                    + "p.patient_id, p.name AS patient_name, p.address AS patient_address, p.contact_number AS patient_contact, p.email AS patient_email, "
+                    + "d.dentist_id, d.name AS dentist_name, d.contact_number AS dentist_contact, d.email AS dentist_email, d.status AS dentist_status, "
                     + "t.treatment_type_id, t.name AS treatment_name, t.consultation_fee AS treatment_fee "
                     + "FROM appointment a "
                     + "JOIN patient p ON a.patient_id = p.patient_id "
@@ -97,7 +97,7 @@ public class AppointmentDAO implements AppointmentDAOInterface {
         return null;
     }
 
-    // Finds an appointment by the appointment number
+    // Find appointment by number
     @Override
     public Optional<Appointment> findByAppointmentNumber(String appointmentNumber) {
         Integer id = parseId(appointmentNumber);
@@ -159,7 +159,7 @@ public class AppointmentDAO implements AppointmentDAOInterface {
         return appointments;
     }
 
-    // Retrieves all appointments
+    // get all appointments
     @Override
     public List<Appointment> findAll() {
         String sql = BASE_SELECT + "ORDER BY a.appointment_date, a.appointment_time";
@@ -183,7 +183,7 @@ public class AppointmentDAO implements AppointmentDAOInterface {
         return appointments;
     }
 
-    // Updates an appointment's status
+    // Update appointment status
     @Override
     public boolean updateStatus(String appointmentNumber, AppointmentStatus newStatus) {
         Integer id = parseId(appointmentNumber);
@@ -209,7 +209,6 @@ public class AppointmentDAO implements AppointmentDAOInterface {
         }
     }
 
-    // Builds an Appointment from a database row
     private Appointment mapRow(ResultSet rs) throws SQLException {
         Patient patient = new Patient(
                 String.valueOf(rs.getInt("patient_id")),
@@ -217,12 +216,14 @@ public class AppointmentDAO implements AppointmentDAOInterface {
                 rs.getString("patient_address"),
                 rs.getString("patient_contact")
         );
+        patient.setEmail(rs.getString("patient_email"));
 
         Dentist dentist = new Dentist(
                 String.valueOf(rs.getInt("dentist_id")),
                 rs.getString("dentist_name"),
                 rs.getString("dentist_contact")
         );
+        dentist.setEmail(rs.getString("dentist_email"));
         dentist.setStatus(DentistStatus.valueOf(rs.getString("dentist_status")));
 
         TreatmentType treatmentType = new TreatmentType(

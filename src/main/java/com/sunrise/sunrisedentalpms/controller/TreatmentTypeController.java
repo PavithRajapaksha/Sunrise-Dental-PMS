@@ -94,7 +94,11 @@ public class TreatmentTypeController extends HttpServlet {
 
         try {
             BigDecimal fee = new BigDecimal(feeText);
-            TreatmentType created = treatmentTypeService.addTreatmentType(name, fee, loggedInUser.getRole());
+            TreatmentType created = treatmentTypeService.addTreatmentType(
+                    name,
+                    fee,
+                    loggedInUser.getRole()
+            );
 
             request.setAttribute("treatmentType", created);
             request.setAttribute("successMessage", "Treatment type added successfully.");
@@ -116,10 +120,14 @@ public class TreatmentTypeController extends HttpServlet {
 
         try {
             BigDecimal fee = new BigDecimal(feeText);
-            treatmentTypeService.updateConsultationFee(treatmentTypeId, fee, loggedInUser.getRole());
 
-            request.setAttribute("successMessage", "Consultation fee updated successfully.");
-            request.getRequestDispatcher("treatmentTypeList.jsp").forward(request, response);
+            treatmentTypeService.updateConsultationFee(
+                    treatmentTypeId,
+                    fee,
+                    loggedInUser.getRole()
+            );
+
+            response.sendRedirect(request.getContextPath() + "/treatmentType");
         } catch (NumberFormatException e) {
             request.setAttribute("errorMessage", "Consultation fee must be a valid number.");
             request.getRequestDispatcher("treatmentTypeList.jsp").forward(request, response);

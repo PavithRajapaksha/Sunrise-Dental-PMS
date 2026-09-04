@@ -151,12 +151,12 @@ class TreatmentTypeControllerTest {
         when(request.getParameter("action")).thenReturn("updateFee");
         when(request.getParameter("treatmentTypeId")).thenReturn("1");
         when(request.getParameter("consultationFee")).thenReturn("18000.00");
-        when(request.getRequestDispatcher("treatmentTypeList.jsp")).thenReturn(dispatcher);
+        when(request.getContextPath()).thenReturn("");
 
         treatmentTypeController.doPost(request, response);
 
         verify(treatmentTypeService).updateConsultationFee("1", new BigDecimal("18000.00"), UserRole.ADMIN);
-        verify(dispatcher).forward(request, response);
+        verify(response).sendRedirect("/treatmentType");
     }
 
     @Test

@@ -14,18 +14,19 @@ import java.util.Optional;
 
 public class DentistDAO implements DentistDAOInterface {
 
-    // Creates a new dentist record
+    // Register new dentist
     @Override
-    public Dentist createDentist(String name, String contactNumber) {
+    public Dentist createDentist(String name, String contactNumber, String email) {
         Dentist candidate;
         try {
             candidate = new Dentist("VALIDATION_ONLY", name, contactNumber);
+            candidate.setEmail(email);
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid dentist data: " + e.getMessage());
             return null;
         }
 
-        String sql = "INSERT INTO dentist (name, contact_number, status) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO dentist (name, contact_number, email, status) VALUES (?, ?, ?, ?)";
 
         Connection conn = DBConnection.getInstance().getConnection();
 
@@ -33,14 +34,17 @@ public class DentistDAO implements DentistDAOInterface {
 
             stmt.setString(1, name);
             stmt.setString(2, contactNumber);
-            stmt.setString(3, candidate.getStatus().name());
+            stmt.setString(3, email);
+            stmt.setString(4, candidate.getStatus().name());
 
             stmt.executeUpdate();
 
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     String generatedId = String.valueOf(keys.getInt(1));
-                    return new Dentist(generatedId, name, contactNumber);
+                    Dentist created = new Dentist(generatedId, name, contactNumber);
+                    created.setEmail(email);
+                    return created;
                 }
             }
 
@@ -62,7 +66,7 @@ public class DentistDAO implements DentistDAOInterface {
             return Optional.empty();
         }
 
-        String sql = "SELECT dentist_id, name, contact_number, status FROM dentist WHERE dentist_id = ?";
+        String sql = "SELECT dentist_id, name, contact_number, email, status FROM dentist WHERE dentist_id = ?";
 
         Connection conn = DBConnection.getInstance().getConnection();
 
@@ -86,7 +90,7 @@ public class DentistDAO implements DentistDAOInterface {
 
     @Override
     public List<Dentist> findAll() {
-        String sql = "SELECT dentist_id, name, contact_number, status FROM dentist ORDER BY name";
+        String sql = "SELECT dentist_id, name, contact_number, email, status FROM dentist ORDER BY name";
 
         List<Dentist> dentists = new ArrayList<>();
         Connection conn = DBConnection.getInstance().getConnection();
@@ -107,10 +111,10 @@ public class DentistDAO implements DentistDAOInterface {
         return dentists;
     }
 
-    // Retrieves all available dentists
+    // get all available dentists
     @Override
     public List<Dentist> findAllAvailable() {
-        String sql = "SELECT dentist_id, name, contact_number, status FROM dentist WHERE status = ? ORDER BY name";
+        String sql = "SELECT dentist_id, name, contact_number, email, status FROM dentist WHERE status = ? ORDER BY name";
 
         List<Dentist> dentists = new ArrayList<>();
         Connection conn = DBConnection.getInstance().getConnection();
@@ -133,7 +137,7 @@ public class DentistDAO implements DentistDAOInterface {
         return dentists;
     }
 
-    // Updates a dentist's status
+    // Update dentist status
     @Override
     public boolean updateStatus(String dentistId, DentistStatus newStatus) {
         int id;
@@ -161,13 +165,13 @@ public class DentistDAO implements DentistDAOInterface {
         }
     }
 
-    // Builds a Dentist object from a database row
     private Dentist mapRow(ResultSet rs) throws SQLException {
         Dentist dentist = new Dentist(
                 String.valueOf(rs.getInt("dentist_id")),
                 rs.getString("name"),
                 rs.getString("contact_number")
         );
+        dentist.setEmail(rs.getString("email"));
         dentist.setStatus(DentistStatus.valueOf(rs.getString("status")));
         return dentist;
     }

@@ -14,15 +14,26 @@ import java.util.List;
 
 public interface AppointmentServiceInterface {
 
-    Appointment bookAppointment(Patient patient, Dentist dentist, TreatmentType treatmentType,
-                                LocalDateTime appointmentDateTime, String bookedByUserId)
-            throws ValidationException, DoubleBookingException;
+    Appointment bookAppointment(
+            Patient patient,
+            Dentist dentist,
+            TreatmentType treatmentType,
+            LocalDateTime appointmentDateTime,
+            String bookedByUserId
+    ) throws ValidationException, DoubleBookingException;
 
-    Appointment findAppointment(String appointmentNumber) throws RecordNotFoundException;
+    Appointment findAppointment(
+            String appointmentNumber
+    ) throws RecordNotFoundException;
 
-    List<Appointment> listAppointmentsForPatient(String patientId);
+    List<Appointment> listAppointmentsForPatient(
+            String patientId
+    );
 
     List<Appointment> listAllAppointments();
 
-    void updateAppointmentStatus(String appointmentNumber, AppointmentStatus newStatus) throws RecordNotFoundException;
+    void updateAppointmentStatus(
+            String appointmentNumber,
+            AppointmentStatus newStatus
+    ) throws RecordNotFoundException, ValidationException;
 }

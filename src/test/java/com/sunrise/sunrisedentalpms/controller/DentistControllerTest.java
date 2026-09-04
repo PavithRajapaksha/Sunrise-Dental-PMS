@@ -118,7 +118,9 @@ class DentistControllerTest {
         when(request.getParameter("action")).thenReturn("register");
         when(request.getParameter("name")).thenReturn("Dr. Perera");
         when(request.getParameter("contactNumber")).thenReturn("0711234567");
-        when(dentistService.registerDentist("Dr. Perera", "0711234567", UserRole.ADMIN)).thenReturn(created);
+        when(request.getParameter("email")).thenReturn("dr.perera@example.com");
+        when(dentistService.registerDentist("Dr. Perera", "0711234567", "dr.perera@example.com", UserRole.ADMIN))
+                .thenReturn(created);
         when(request.getRequestDispatcher("dentistDetails.jsp")).thenReturn(dispatcher);
 
         dentistController.doPost(request, response);
@@ -136,7 +138,8 @@ class DentistControllerTest {
         when(request.getParameter("action")).thenReturn("register");
         when(request.getParameter("name")).thenReturn("Dr. Perera");
         when(request.getParameter("contactNumber")).thenReturn("0711234567");
-        when(dentistService.registerDentist("Dr. Perera", "0711234567", UserRole.RECEPTIONIST))
+        when(request.getParameter("email")).thenReturn("dr.perera@example.com");
+        when(dentistService.registerDentist("Dr. Perera", "0711234567", "dr.perera@example.com", UserRole.RECEPTIONIST))
                 .thenThrow(new AuthorizationException("Only an admin can register a new dentist."));
         when(request.getRequestDispatcher("registerDentist.jsp")).thenReturn(dispatcher);
 

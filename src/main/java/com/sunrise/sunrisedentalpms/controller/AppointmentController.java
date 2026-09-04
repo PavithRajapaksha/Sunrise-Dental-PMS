@@ -32,149 +32,712 @@ import java.util.List;
 public class AppointmentController extends HttpServlet {
 
     private PatientServiceInterface patientService;
+
     private DentistServiceInterface dentistService;
-    private TreatmentTypeServiceInterface treatmentTypeService;
-    private AppointmentServiceInterface appointmentService;
+
+    private TreatmentTypeServiceInterface
+            treatmentTypeService;
+
+    private AppointmentServiceInterface
+            appointmentService;
 
     public AppointmentController() {
     }
 
-    // for testing
-    AppointmentController(PatientServiceInterface patientService, DentistServiceInterface dentistService,
-                          TreatmentTypeServiceInterface treatmentTypeService, AppointmentServiceInterface appointmentService) {
-        this.patientService = patientService;
-        this.dentistService = dentistService;
-        this.treatmentTypeService = treatmentTypeService;
-        this.appointmentService = appointmentService;
+    // For testing
+    AppointmentController(
+            PatientServiceInterface patientService,
+            DentistServiceInterface dentistService,
+            TreatmentTypeServiceInterface treatmentTypeService,
+            AppointmentServiceInterface appointmentService) {
+
+        this.patientService =
+                patientService;
+
+        this.dentistService =
+                dentistService;
+
+        this.treatmentTypeService =
+                treatmentTypeService;
+
+        this.appointmentService =
+                appointmentService;
     }
 
     @Override
     public void init() {
+
         if (patientService == null) {
-            patientService = ServiceFactory.getPatientService();
+
+            patientService =
+                    ServiceFactory
+                            .getPatientService();
         }
+
         if (dentistService == null) {
-            dentistService = ServiceFactory.getDentistService();
+
+            dentistService =
+                    ServiceFactory
+                            .getDentistService();
         }
+
         if (treatmentTypeService == null) {
-            treatmentTypeService = ServiceFactory.getTreatmentTypeService();
+
+            treatmentTypeService =
+                    ServiceFactory
+                            .getTreatmentTypeService();
         }
+
         if (appointmentService == null) {
-            appointmentService = ServiceFactory.getAppointmentService();
+
+            appointmentService =
+                    ServiceFactory
+                            .getAppointmentService();
         }
     }
 
     // Show appointments
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        if (SessionUtil.getLoggedInUser(request) == null) {
-            response.sendRedirect("login.jsp");
+    protected void doGet(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws ServletException,
+            IOException {
+
+        if (SessionUtil.getLoggedInUser(request)
+                == null) {
+
+            response.sendRedirect(
+                    "login.jsp"
+            );
+
             return;
         }
 
-        String appointmentNumber = request.getParameter("appointmentNumber");
-        String patientId = request.getParameter("patientId");
+        String action =
+                request.getParameter(
+                        "action"
+                );
+
+        if ("book".equals(action)) {
+
+            showBookingForm(
+                    request,
+                    response
+            );
+
+            return;
+        }
+
+        String appointmentNumber =
+                request.getParameter(
+                        "appointmentNumber"
+                );
+
+        String patientId =
+                request.getParameter(
+                        "patientId"
+                );
+
+        String contactNumber =
+                request.getParameter(
+                        "contactNumber"
+                );
 
         try {
-            if (appointmentNumber != null && !appointmentNumber.isEmpty()) {
-                Appointment appointment = appointmentService.findAppointment(appointmentNumber);
-                request.setAttribute("appointment", appointment);
-                request.getRequestDispatcher("appointmentDetails.jsp").forward(request, response);
+
+            /*
+             * Find one appointment by number.
+             */
+            if (appointmentNumber != null
+                    && !appointmentNumber
+                    .trim()
+                    .isEmpty()) {
+
+                Appointment appointment =
+                        appointmentService
+                                .findAppointment(
+                                        appointmentNumber
+                                                .trim()
+                                );
+
+                request.setAttribute(
+                        "appointment",
+                        appointment
+                );
+
+                request.getRequestDispatcher(
+                        "appointmentDetails.jsp"
+                ).forward(
+                        request,
+                        response
+                );
+
                 return;
             }
 
-            if (patientId != null && !patientId.isEmpty()) {
-                List<Appointment> appointments = appointmentService.listAppointmentsForPatient(patientId);
-                request.setAttribute("appointments", appointments);
-                request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
+            /*
+             * Search appointments by patient ID.
+             */
+            if (patientId != null
+                    && !patientId
+                    .trim()
+                    .isEmpty()) {
+
+                Patient patient =
+                        patientService
+                                .findPatient(
+                                        patientId
+                                                .trim()
+                                );
+
+                showAppointmentsForPatient(
+                        request,
+                        response,
+                        patient
+                );
+
                 return;
             }
 
-            List<Appointment> appointments = appointmentService.listAllAppointments();
-            request.setAttribute("appointments", appointments);
-            request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
+            /*
+             * Search appointments using
+             * patient's contact number.
+             */
+            if (contactNumber != null
+                    && !contactNumber
+                    .trim()
+                    .isEmpty()) {
+
+                Patient patient =
+                        patientService
+                                .findPatientByContactNumber(
+                                        contactNumber
+                                                .trim()
+                                );
+
+                showAppointmentsForPatient(
+                        request,
+                        response,
+                        patient
+                );
+
+                return;
+            }
+
+            /*
+             * No search parameters:
+             * show every appointment.
+             */
+            List<Appointment> appointments =
+                    appointmentService
+                            .listAllAppointments();
+
+            request.setAttribute(
+                    "appointments",
+                    appointments
+            );
+
+            request.getRequestDispatcher(
+                    "appointmentList.jsp"
+            ).forward(
+                    request,
+                    response
+            );
+
         } catch (RecordNotFoundException e) {
-            request.setAttribute("errorMessage", e.getMessage());
-            request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
+
+            request.setAttribute(
+                    "errorMessage",
+                    e.getMessage()
+            );
+
+            request.setAttribute(
+                    "appointments",
+                    appointmentService
+                            .listAllAppointments()
+            );
+
+            request.getRequestDispatcher(
+                    "appointmentList.jsp"
+            ).forward(
+                    request,
+                    response
+            );
         }
     }
 
-    // Book appointment or update status
+    /*
+     * Book an appointment or cancel
+     * a scheduled appointment.
+     */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        User loggedInUser = SessionUtil.getLoggedInUser(request);
+    protected void doPost(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws ServletException,
+            IOException {
+
+        User loggedInUser =
+                SessionUtil.getLoggedInUser(
+                        request
+                );
 
         if (loggedInUser == null) {
-            response.sendRedirect("login.jsp");
+
+            response.sendRedirect(
+                    "login.jsp"
+            );
+
             return;
         }
 
-        String action = request.getParameter("action");
+        String action =
+                request.getParameter(
+                        "action"
+                );
 
-        if ("updateStatus".equals(action)) {
-            handleUpdateStatus(request, response);
+        if ("cancel".equals(action)) {
+
+            handleCancel(
+                    request,
+                    response
+            );
+
         } else {
-            handleBook(request, response, loggedInUser);
+
+            handleBook(
+                    request,
+                    response,
+                    loggedInUser
+            );
         }
+    }
+
+    private void showAppointmentsForPatient(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Patient patient)
+            throws ServletException,
+            IOException {
+
+        List<Appointment> appointments =
+                appointmentService
+                        .listAppointmentsForPatient(
+                                patient.getPatientId()
+                        );
+
+        request.setAttribute(
+                "searchedPatient",
+                patient
+        );
+
+        request.setAttribute(
+                "appointments",
+                appointments
+        );
+
+        request.getRequestDispatcher(
+                "appointmentList.jsp"
+        ).forward(
+                request,
+                response
+        );
+    }
+
+    private void showBookingForm(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws ServletException,
+            IOException {
+
+        prepareBookingOptions(
+                request
+        );
+
+        String contactNumber =
+                request.getParameter(
+                        "contactNumber"
+                );
+
+        String patientId =
+                request.getParameter(
+                        "patientId"
+                );
+
+        try {
+
+            if (contactNumber != null
+                    && !contactNumber
+                    .trim()
+                    .isEmpty()) {
+
+                Patient patient =
+                        patientService
+                                .findPatientByContactNumber(
+                                        contactNumber
+                                                .trim()
+                                );
+
+                request.setAttribute(
+                        "selectedPatient",
+                        patient
+                );
+
+            } else if (patientId != null
+                    && !patientId
+                    .trim()
+                    .isEmpty()) {
+
+                Patient patient =
+                        patientService
+                                .findPatient(
+                                        patientId
+                                                .trim()
+                                );
+
+                request.setAttribute(
+                        "selectedPatient",
+                        patient
+                );
+            }
+
+        } catch (RecordNotFoundException e) {
+
+            request.setAttribute(
+                    "errorMessage",
+                    e.getMessage()
+            );
+        }
+
+        request.getRequestDispatcher(
+                "bookAppointment.jsp"
+        ).forward(
+                request,
+                response
+        );
+    }
+
+    private void prepareBookingOptions(
+            HttpServletRequest request) {
+
+        List<Dentist> dentists =
+                dentistService
+                        .listAvailableDentists();
+
+        List<TreatmentType> treatmentTypes =
+                treatmentTypeService
+                        .listAllTreatmentTypes();
+
+        request.setAttribute(
+                "dentists",
+                dentists
+        );
+
+        request.setAttribute(
+                "treatmentTypes",
+                treatmentTypes
+        );
     }
 
     // Book new appointment
-    private void handleBook(HttpServletRequest request, HttpServletResponse response, User loggedInUser)
-            throws ServletException, IOException {
-        String patientId = request.getParameter("patientId");
-        String dentistId = request.getParameter("dentistId");
-        String treatmentTypeId = request.getParameter("treatmentTypeId");
-        String dateText = request.getParameter("appointmentDate");
-        String timeText = request.getParameter("appointmentTime");
+    private void handleBook(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            User loggedInUser)
+            throws ServletException,
+            IOException {
+
+        String patientId =
+                request.getParameter(
+                        "patientId"
+                );
+
+        String dentistId =
+                request.getParameter(
+                        "dentistId"
+                );
+
+        String treatmentTypeId =
+                request.getParameter(
+                        "treatmentTypeId"
+                );
+
+        String dateText =
+                request.getParameter(
+                        "appointmentDate"
+                );
+
+        String timeText =
+                request.getParameter(
+                        "appointmentTime"
+                );
+
+        Patient patient = null;
 
         try {
-            Patient patient = patientService.findPatient(patientId);
-            Dentist dentist = dentistService.findDentist(dentistId);
-            TreatmentType treatmentType = treatmentTypeService.findTreatmentType(treatmentTypeId);
 
-            LocalDateTime appointmentDateTime = LocalDateTime.of(LocalDate.parse(dateText), LocalTime.parse(timeText));
+            patient =
+                    patientService
+                            .findPatient(
+                                    patientId
+                            );
 
-            Appointment created = appointmentService.bookAppointment(
-                    patient, dentist, treatmentType, appointmentDateTime, loggedInUser.getUserId());
+            request.setAttribute(
+                    "selectedPatient",
+                    patient
+            );
 
-            request.setAttribute("appointment", created);
-            request.setAttribute("successMessage", "Appointment booked successfully.");
-            request.getRequestDispatcher("appointmentDetails.jsp").forward(request, response);
+            Dentist dentist =
+                    dentistService
+                            .findDentist(
+                                    dentistId
+                            );
+
+            TreatmentType treatmentType =
+                    treatmentTypeService
+                            .findTreatmentType(
+                                    treatmentTypeId
+                            );
+
+            LocalDateTime appointmentDateTime =
+                    LocalDateTime.of(
+                            LocalDate.parse(
+                                    dateText
+                            ),
+                            LocalTime.parse(
+                                    timeText
+                            )
+                    );
+
+            Appointment created =
+                    appointmentService
+                            .bookAppointment(
+                                    patient,
+                                    dentist,
+                                    treatmentType,
+                                    appointmentDateTime,
+                                    loggedInUser
+                                            .getUserId()
+                            );
+
+            request.setAttribute(
+                    "appointment",
+                    created
+            );
+
+            request.setAttribute(
+                    "successMessage",
+                    "Appointment booked successfully."
+            );
+
+            request.getRequestDispatcher(
+                    "appointmentDetails.jsp"
+            ).forward(
+                    request,
+                    response
+            );
+
         } catch (DateTimeParseException e) {
-            request.setAttribute("errorMessage", "Invalid appointment date or time.");
-            request.getRequestDispatcher("registerAppointment.jsp").forward(request, response);
-        } catch (RecordNotFoundException | ValidationException | DoubleBookingException e) {
-            request.setAttribute("errorMessage", e.getMessage());
-            request.getRequestDispatcher("registerAppointment.jsp").forward(request, response);
+
+            prepareBookingOptions(
+                    request
+            );
+
+            request.setAttribute(
+                    "selectedPatient",
+                    patient
+            );
+
+            request.setAttribute(
+                    "errorMessage",
+                    "Invalid appointment date or time."
+            );
+
+            request.getRequestDispatcher(
+                    "bookAppointment.jsp"
+            ).forward(
+                    request,
+                    response
+            );
+
+        } catch (RecordNotFoundException
+                 | ValidationException
+                 | DoubleBookingException e) {
+
+            prepareBookingOptions(
+                    request
+            );
+
+            request.setAttribute(
+                    "selectedPatient",
+                    patient
+            );
+
+            request.setAttribute(
+                    "errorMessage",
+                    e.getMessage()
+            );
+
+            request.getRequestDispatcher(
+                    "bookAppointment.jsp"
+            ).forward(
+                    request,
+                    response
+            );
         }
     }
 
-    // Update appointment status
-    private void handleUpdateStatus(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        String appointmentNumber = request.getParameter("appointmentNumber");
-        String statusText = request.getParameter("status");
+    /*
+     * Cancel appointment.
+     *
+     * Notice that no "status" parameter is read
+     * from the browser. A cancel request always
+     * means AppointmentStatus.CANCELLED.
+     */
+    private void handleCancel(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws ServletException,
+            IOException {
 
-        if (statusText == null || statusText.isEmpty()) {
-            request.setAttribute("errorMessage", "Invalid appointment status.");
-            request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
+        String appointmentNumber =
+                request.getParameter(
+                        "appointmentNumber"
+                );
+
+        if (appointmentNumber == null
+                || appointmentNumber
+                .trim()
+                .isEmpty()) {
+
+            showAppointmentListError(
+                    request,
+                    response,
+                    "Invalid appointment number."
+            );
+
             return;
         }
 
-        try {
-            AppointmentStatus newStatus = AppointmentStatus.valueOf(statusText);
-            appointmentService.updateAppointmentStatus(appointmentNumber, newStatus);
+        String cleanedAppointmentNumber =
+                appointmentNumber.trim();
 
-            request.setAttribute("successMessage", "Appointment status updated successfully.");
-            request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
-        } catch (IllegalArgumentException e) {
-            request.setAttribute("errorMessage", "Invalid appointment status.");
-            request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
+        try {
+
+            appointmentService
+                    .updateAppointmentStatus(
+                            cleanedAppointmentNumber,
+                            AppointmentStatus.CANCELLED
+                    );
+
+            /*
+             * Reload from the database so that
+             * appointmentDetails.jsp immediately
+             * receives status CANCELLED.
+             */
+            Appointment appointment =
+                    appointmentService
+                            .findAppointment(
+                                    cleanedAppointmentNumber
+                            );
+
+            request.setAttribute(
+                    "appointment",
+                    appointment
+            );
+
+            request.setAttribute(
+                    "successMessage",
+                    "Appointment cancelled successfully."
+            );
+
+            request.getRequestDispatcher(
+                    "appointmentDetails.jsp"
+            ).forward(
+                    request,
+                    response
+            );
+
+        } catch (ValidationException e) {
+
+            /*
+             * Examples:
+             *
+             * - appointment already completed
+             * - appointment already cancelled
+             */
+            request.setAttribute(
+                    "errorMessage",
+                    e.getMessage()
+            );
+
+            try {
+
+                Appointment appointment =
+                        appointmentService
+                                .findAppointment(
+                                        cleanedAppointmentNumber
+                                );
+
+                request.setAttribute(
+                        "appointment",
+                        appointment
+                );
+
+                request.getRequestDispatcher(
+                        "appointmentDetails.jsp"
+                ).forward(
+                        request,
+                        response
+                );
+
+            } catch (RecordNotFoundException ex) {
+
+                showAppointmentListError(
+                        request,
+                        response,
+                        ex.getMessage()
+                );
+            }
+
         } catch (RecordNotFoundException e) {
-            request.setAttribute("errorMessage", e.getMessage());
-            request.getRequestDispatcher("appointmentList.jsp").forward(request, response);
+
+            showAppointmentListError(
+                    request,
+                    response,
+                    e.getMessage()
+            );
         }
+    }
+
+    /*
+     * Common error helper used when an appointment
+     * cannot be loaded.
+     */
+    private void showAppointmentListError(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String message)
+            throws ServletException,
+            IOException {
+
+        request.setAttribute(
+                "errorMessage",
+                message
+        );
+
+        request.setAttribute(
+                "appointments",
+                appointmentService
+                        .listAllAppointments()
+        );
+
+        request.getRequestDispatcher(
+                "appointmentList.jsp"
+        ).forward(
+                request,
+                response
+        );
     }
 }
