@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface DentistServiceInterface {
 
-    Dentist registerDentist(String name, String contactNumber, UserRole requestingUserRole)
+    Dentist registerDentist(String name, String contactNumber, String email, UserRole requestingUserRole)
             throws ValidationException, AuthorizationException;
 
     Dentist findDentist(String dentistId) throws RecordNotFoundException;

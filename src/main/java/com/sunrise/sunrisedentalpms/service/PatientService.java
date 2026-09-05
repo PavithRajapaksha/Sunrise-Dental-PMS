@@ -12,20 +12,26 @@ import java.util.Optional;
 public class PatientService implements PatientServiceInterface {
 
     private final PatientDAOInterface patientDao;
+    private final Notifier notifier;
 
-    public PatientService(PatientDAOInterface patientDao) {
+    public PatientService(PatientDAOInterface patientDao, Notifier notifier) {
         this.patientDao = Objects.requireNonNull(patientDao, "PatientDAOInterface cannot be null");
+        this.notifier = Objects.requireNonNull(notifier, "Notifier cannot be null");
     }
 
-    // Registers a new patient
+    // Register new patient
     @Override
-    public Patient registerPatient(String name, String address, String contactNumber) throws ValidationException {
+    public Patient registerPatient(String name, String address, String contactNumber, String email) throws ValidationException {
         try {
-            Patient created = patientDao.createPatient(name, address, contactNumber);
+            Patient created = patientDao.createPatient(name, address, contactNumber, email);
 
             if (created == null) {
                 throw new ValidationException("Could not register patient.");
             }
+
+            notifier.publish(created.getEmail(),
+                    "Welcome to Sunrise Dental Clinic, " + created.getName() + ". Your patient ID is " + created.getPatientId() + ".",
+                    null);
 
             return created;
         } catch (IllegalArgumentException e) {
@@ -33,27 +39,27 @@ public class PatientService implements PatientServiceInterface {
         }
     }
 
-    // Finds a patient by id
+    // Find patient by id
     @Override
     public Patient findPatient(String patientId) throws RecordNotFoundException {
         Optional<Patient> patient = patientDao.findById(patientId);
         return patient.orElseThrow(() -> new RecordNotFoundException("No patient found with id " + patientId));
     }
 
-    // Finds a patient by contact number
+    // Find patient by contact number
     @Override
     public Patient findPatientByContactNumber(String contactNumber) throws RecordNotFoundException {
         Optional<Patient> patient = patientDao.findByContactNumber(contactNumber);
         return patient.orElseThrow(() -> new RecordNotFoundException("No patient found with contact number " + contactNumber));
     }
 
-    // Lists every registered patient
+    // Lists all patients
     @Override
     public List<Patient> listAllPatients() {
         return patientDao.findAll();
     }
 
-    // Finds an existing patient by contact number, or registers a new one
+    // Find patient or register
     @Override
     public Patient findOrRegisterPatient(String name, String address, String contactNumber) throws ValidationException {
         try {

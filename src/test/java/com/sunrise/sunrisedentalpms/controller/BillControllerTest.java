@@ -3,13 +3,18 @@ package com.sunrise.sunrisedentalpms.controller;
 import com.sunrise.sunrisedentalpms.exception.RecordNotFoundException;
 import com.sunrise.sunrisedentalpms.exception.ValidationException;
 import com.sunrise.sunrisedentalpms.model.Appointment;
+import com.sunrise.sunrisedentalpms.model.AppointmentStatus;
 import com.sunrise.sunrisedentalpms.model.Bill;
+import com.sunrise.sunrisedentalpms.model.BillStatus;
 import com.sunrise.sunrisedentalpms.model.Dentist;
 import com.sunrise.sunrisedentalpms.model.Patient;
+import com.sunrise.sunrisedentalpms.model.PaymentType;
 import com.sunrise.sunrisedentalpms.model.TreatmentType;
 import com.sunrise.sunrisedentalpms.model.User;
 import com.sunrise.sunrisedentalpms.model.UserRole;
+import com.sunrise.sunrisedentalpms.service.AppointmentServiceInterface;
 import com.sunrise.sunrisedentalpms.service.BillingServiceInterface;
+import com.sunrise.sunrisedentalpms.service.PatientServiceInterface;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +31,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +43,12 @@ class BillControllerTest {
 
     @Mock
     private BillingServiceInterface billingService;
+
+    @Mock
+    private PatientServiceInterface patientService;
+
+    @Mock
+    private AppointmentServiceInterface appointmentService;
 
     @Mock
     private HttpServletRequest request;
@@ -51,151 +66,911 @@ class BillControllerTest {
 
     @BeforeEach
     void setUp() {
-        billController = new BillController(billingService);
+        billController =
+                new BillController(
+                        billingService,
+                        patientService,
+                        appointmentService
+                );
     }
 
     @Test
-    void Get_whenNotLoggedIn_shouldRedirectToLogin() throws Exception {
-        when(request.getSession(false)).thenReturn(null);
+    void Get_whenNotLoggedIn_shouldRedirectToLogin()
+            throws Exception {
 
-        billController.doGet(request, response);
+        when(request.getSession(false))
+                .thenReturn(null);
 
-        verify(response).sendRedirect("login.jsp");
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(response)
+                .sendRedirect(
+                        "login.jsp"
+                );
     }
 
     @Test
-    void Get_withBillId_shouldReturnBill() throws Exception {
-        Bill bill = sampleBill();
+    void Get_withBillId_shouldReturnBill()
+            throws Exception {
 
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("billId")).thenReturn("1");
-        when(billingService.findBillById("1")).thenReturn(bill);
-        when(request.getRequestDispatcher("billDetails.jsp")).thenReturn(dispatcher);
+        Bill bill =
+                sampleBill();
 
-        billController.doGet(request, response);
+        when(request.getSession(false))
+                .thenReturn(session);
 
-        verify(request).setAttribute("bill", bill);
-        verify(dispatcher).forward(request, response);
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        stubBillGetParameters(
+                "1",
+                null,
+                null,
+                null
+        );
+
+        when(billingService.findBillById("1"))
+                .thenReturn(bill);
+
+        when(request.getRequestDispatcher(
+                "billDetails.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "bill",
+                        bill
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Get_withAppointmentNumber_shouldReturnBill() throws Exception {
-        Bill bill = sampleBill();
+    void Get_withAppointmentNumber_shouldReturnBill()
+            throws Exception {
 
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("billId")).thenReturn(null);
-        when(request.getParameter("appointmentNumber")).thenReturn("1");
-        when(billingService.findBillByAppointmentNumber("1")).thenReturn(bill);
-        when(request.getRequestDispatcher("billDetails.jsp")).thenReturn(dispatcher);
+        Bill bill =
+                sampleBill();
 
-        billController.doGet(request, response);
+        when(request.getSession(false))
+                .thenReturn(session);
 
-        verify(request).setAttribute("bill", bill);
-        verify(dispatcher).forward(request, response);
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        stubBillGetParameters(
+                null,
+                "1",
+                null,
+                null
+        );
+
+        when(billingService
+                .findBillByAppointmentNumber("1"))
+                .thenReturn(bill);
+
+        when(request.getRequestDispatcher(
+                "billDetails.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "bill",
+                        bill
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Get_withNoParams_shouldListAllBills() throws Exception {
-        List<Bill> bills = List.of(sampleBill());
+    void Get_withContactNumber_shouldLoadOnlyScheduledAppointments()
+            throws Exception {
 
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("billId")).thenReturn(null);
-        when(request.getParameter("appointmentNumber")).thenReturn(null);
-        when(billingService.listAllBills()).thenReturn(bills);
-        when(request.getRequestDispatcher("billList.jsp")).thenReturn(dispatcher);
+        Patient patient =
+                samplePatient();
 
-        billController.doGet(request, response);
+        Appointment scheduledAppointment =
+                sampleAppointment(
+                        "1",
+                        AppointmentStatus.SCHEDULED
+                );
 
-        verify(request).setAttribute("bills", bills);
-        verify(dispatcher).forward(request, response);
+        Appointment completedAppointment =
+                sampleAppointment(
+                        "2",
+                        AppointmentStatus.COMPLETED
+                );
+
+        Appointment cancelledAppointment =
+                sampleAppointment(
+                        "3",
+                        AppointmentStatus.CANCELLED
+                );
+
+        List<Appointment> allAppointments =
+                List.of(
+                        scheduledAppointment,
+                        completedAppointment,
+                        cancelledAppointment
+                );
+
+        List<Bill> bills =
+                List.of(
+                        sampleBill()
+                );
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        stubBillGetParameters(
+                null,
+                null,
+                "0711234567",
+                null
+        );
+
+        when(patientService
+                .findPatientByContactNumber(
+                        "0711234567"
+                ))
+                .thenReturn(patient);
+
+        when(appointmentService
+                .listAppointmentsForPatient(
+                        "1"
+                ))
+                .thenReturn(allAppointments);
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "selectedPatient",
+                        patient
+                );
+
+        verify(request)
+                .setAttribute(
+                        "patientAppointments",
+                        List.of(scheduledAppointment)
+                );
+
+        verify(request)
+                .setAttribute(
+                        "bills",
+                        bills
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Get_withInvalidBillId_shouldShowErrorOnList() throws Exception {
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("billId")).thenReturn("99");
+    void Get_withUnknownContactNumber_shouldShowError()
+            throws Exception {
+
+        List<Bill> bills =
+                List.of();
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        stubBillGetParameters(
+                null,
+                null,
+                "0999999999",
+                null
+        );
+
+        when(patientService
+                .findPatientByContactNumber(
+                        "0999999999"
+                ))
+                .thenThrow(
+                        new RecordNotFoundException(
+                                "No patient found with contact number 0999999999"
+                        )
+                );
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "No patient found with contact number 0999999999"
+                );
+
+        verify(request)
+                .setAttribute(
+                        "bills",
+                        bills
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
+    }
+
+    @Test
+    void Get_withNoParams_shouldListAllBills()
+            throws Exception {
+
+        List<Bill> bills =
+                List.of(
+                        sampleBill()
+                );
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        stubBillGetParameters(
+                null,
+                null,
+                null,
+                null
+        );
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "bills",
+                        bills
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
+    }
+
+    @Test
+    void Get_withInvalidBillId_shouldShowErrorOnList()
+            throws Exception {
+
+        List<Bill> bills =
+                List.of();
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        stubBillGetParameters(
+                "99",
+                null,
+                null,
+                null
+        );
+
         when(billingService.findBillById("99"))
-                .thenThrow(new RecordNotFoundException("No bill found with id 99"));
-        when(request.getRequestDispatcher("billList.jsp")).thenReturn(dispatcher);
+                .thenThrow(
+                        new RecordNotFoundException(
+                                "No bill found with id 99"
+                        )
+                );
 
-        billController.doGet(request, response);
+        when(billingService.listAllBills())
+                .thenReturn(bills);
 
-        verify(request).setAttribute("errorMessage", "No bill found with id 99");
-        verify(dispatcher).forward(request, response);
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doGet(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "No bill found with id 99"
+                );
+
+        verify(request)
+                .setAttribute(
+                        "bills",
+                        bills
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Post_generate_withValidAppointment_shouldGenerateBill() throws Exception {
-        Bill bill = sampleBill();
+    void Post_generate_withCashPayment_shouldGenerateBill()
+            throws Exception {
 
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("appointmentNumber")).thenReturn("1");
-        when(billingService.generateBill("1", "1")).thenReturn(bill);
-        when(request.getRequestDispatcher("billDetails.jsp")).thenReturn(dispatcher);
+        Bill bill =
+                sampleBill(
+                        PaymentType.CASH
+                );
 
-        billController.doPost(request, response);
+        when(request.getSession(false))
+                .thenReturn(session);
 
-        verify(request).setAttribute("bill", bill);
-        verify(dispatcher).forward(request, response);
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("1");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn("CASH");
+
+        when(billingService
+                .generateBill(
+                        "1",
+                        PaymentType.CASH,
+                        "1"
+                ))
+                .thenReturn(bill);
+
+        when(request.getRequestDispatcher(
+                "billDetails.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(billingService)
+                .generateBill(
+                        "1",
+                        PaymentType.CASH,
+                        "1"
+                );
+
+        verify(request)
+                .setAttribute(
+                        "bill",
+                        bill
+                );
+
+        verify(request)
+                .setAttribute(
+                        "successMessage",
+                        "Payment recorded and bill generated successfully."
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Post_generate_withUnknownAppointment_shouldShowError() throws Exception {
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("appointmentNumber")).thenReturn("99");
-        when(billingService.generateBill("99", "1"))
-                .thenThrow(new RecordNotFoundException("No appointment found with number 99"));
-        when(request.getRequestDispatcher("appointmentDetails.jsp")).thenReturn(dispatcher);
+    void Post_generate_withCardPayment_shouldGenerateBill()
+            throws Exception {
 
-        billController.doPost(request, response);
+        Bill bill =
+                sampleBill(
+                        PaymentType.CARD
+                );
 
-        verify(request).setAttribute("errorMessage", "No appointment found with number 99");
-        verify(dispatcher).forward(request, response);
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("1");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn("CARD");
+
+        when(billingService
+                .generateBill(
+                        "1",
+                        PaymentType.CARD,
+                        "1"
+                ))
+                .thenReturn(bill);
+
+        when(request.getRequestDispatcher(
+                "billDetails.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(billingService)
+                .generateBill(
+                        "1",
+                        PaymentType.CARD,
+                        "1"
+                );
+
+        verify(request)
+                .setAttribute(
+                        "bill",
+                        bill
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Post_generate_whenAlreadyBilled_shouldShowError() throws Exception {
-        when(request.getSession(false)).thenReturn(session);
-        when(session.getAttribute("loggedInUser")).thenReturn(sampleUser());
-        when(request.getParameter("appointmentNumber")).thenReturn("1");
-        when(billingService.generateBill("1", "1"))
-                .thenThrow(new ValidationException("Could not generate bill. A bill may already exist for this appointment."));
-        when(request.getRequestDispatcher("appointmentDetails.jsp")).thenReturn(dispatcher);
+    void Post_generate_withoutPaymentType_shouldShowError()
+            throws Exception {
 
-        billController.doPost(request, response);
+        List<Bill> bills =
+                List.of();
 
-        verify(request).setAttribute("errorMessage", "Could not generate bill. A bill may already exist for this appointment.");
-        verify(dispatcher).forward(request, response);
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("1");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn(null);
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "Please select a payment type."
+                );
+
+        verify(billingService, never())
+                .generateBill(
+                        anyString(),
+                        any(PaymentType.class),
+                        anyString()
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
     }
 
     @Test
-    void Post_whenNotLoggedIn_shouldRedirectToLogin() throws Exception {
-        when(request.getSession(false)).thenReturn(null);
+    void Post_generate_withoutAppointment_shouldShowError()
+            throws Exception {
 
-        billController.doPost(request, response);
+        List<Bill> bills =
+                List.of();
 
-        verify(response).sendRedirect("login.jsp");
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn("CASH");
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "Please select an appointment."
+                );
+
+        verify(billingService, never())
+                .generateBill(
+                        anyString(),
+                        any(PaymentType.class),
+                        anyString()
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
+    }
+
+    @Test
+    void Post_generate_withInvalidPaymentType_shouldShowError()
+            throws Exception {
+
+        List<Bill> bills =
+                List.of();
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("1");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn("CHEQUE");
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "Invalid payment type selected."
+                );
+
+        verify(billingService, never())
+                .generateBill(
+                        anyString(),
+                        any(PaymentType.class),
+                        anyString()
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
+    }
+
+    @Test
+    void Post_generate_whenAlreadyBilled_shouldShowError()
+            throws Exception {
+
+        List<Bill> bills =
+                List.of();
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("1");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn("CASH");
+
+        when(billingService
+                .generateBill(
+                        "1",
+                        PaymentType.CASH,
+                        "1"
+                ))
+                .thenThrow(
+                        new ValidationException(
+                                "Could not generate bill. A bill may already exist for this appointment."
+                        )
+                );
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "Could not generate bill. A bill may already exist for this appointment."
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
+    }
+
+    @Test
+    void Post_generate_withUnknownAppointment_shouldShowError()
+            throws Exception {
+
+        List<Bill> bills =
+                List.of();
+
+        when(request.getSession(false))
+                .thenReturn(session);
+
+        when(session.getAttribute("loggedInUser"))
+                .thenReturn(sampleUser());
+
+        when(request.getParameter("appointmentNumber"))
+                .thenReturn("99");
+
+        when(request.getParameter("paymentType"))
+                .thenReturn("CASH");
+
+        when(billingService
+                .generateBill(
+                        "99",
+                        PaymentType.CASH,
+                        "1"
+                ))
+                .thenThrow(
+                        new RecordNotFoundException(
+                                "No appointment found with number 99"
+                        )
+                );
+
+        when(billingService.listAllBills())
+                .thenReturn(bills);
+
+        when(request.getRequestDispatcher(
+                "billList.jsp"
+        )).thenReturn(dispatcher);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(request)
+                .setAttribute(
+                        "errorMessage",
+                        "No appointment found with number 99"
+                );
+
+        verify(dispatcher)
+                .forward(
+                        request,
+                        response
+                );
+    }
+
+    @Test
+    void Post_whenNotLoggedIn_shouldRedirectToLogin()
+            throws Exception {
+
+        when(request.getSession(false))
+                .thenReturn(null);
+
+        billController.doPost(
+                request,
+                response
+        );
+
+        verify(response)
+                .sendRedirect(
+                        "login.jsp"
+                );
+    }
+
+    private void stubBillGetParameters(
+            String billId,
+            String appointmentNumber,
+            String contactNumber,
+            String format) {
+
+        doReturn(billId)
+                .when(request)
+                .getParameter("billId");
+
+        doReturn(appointmentNumber)
+                .when(request)
+                .getParameter("appointmentNumber");
+
+        doReturn(contactNumber)
+                .when(request)
+                .getParameter("contactNumber");
+
+        doReturn(format)
+                .when(request)
+                .getParameter("format");
+    }
+
+    private Patient samplePatient() {
+        return new Patient(
+                "1",
+                "Kasun Silva",
+                "12 Galle Road, Colombo",
+                "0711234567"
+        );
+    }
+
+    private Appointment sampleAppointment() {
+        return sampleAppointment(
+                "1",
+                AppointmentStatus.SCHEDULED
+        );
+    }
+
+    private Appointment sampleAppointment(
+            String appointmentNumber,
+            AppointmentStatus status) {
+
+        Patient patient =
+                samplePatient();
+
+        Dentist dentist =
+                new Dentist(
+                        "1",
+                        "Dr. Perera",
+                        "0711234567"
+                );
+
+        TreatmentType treatmentType =
+                new TreatmentType(
+                        "1",
+                        "Root Canal",
+                        new BigDecimal("15000.00")
+                );
+
+        return new Appointment.Builder(
+                appointmentNumber
+        )
+                .patient(patient)
+                .dentist(dentist)
+                .treatmentType(treatmentType)
+                .appointmentDateTime(
+                        LocalDateTime.now()
+                                .plusDays(1)
+                )
+                .status(status)
+                .bookedByUserId("1")
+                .build();
     }
 
     private Bill sampleBill() {
-        Patient patient = new Patient("1", "Kasun Silva", "12 Galle Road, Colombo", "0711234567");
-        Dentist dentist = new Dentist("1", "Dr. Perera", "0711234567");
-        TreatmentType treatmentType = new TreatmentType("1", "Root Canal", new BigDecimal("15000.00"));
+        return sampleBill(
+                PaymentType.CASH
+        );
+    }
 
-        Appointment appointment = new Appointment.Builder("1")
-                .patient(patient).dentist(dentist).treatmentType(treatmentType)
-                .appointmentDateTime(LocalDateTime.now().plusDays(1)).bookedByUserId("1").build();
+    private Bill sampleBill(
+            PaymentType paymentType) {
 
-        return new Bill("1", appointment, new BigDecimal("15000.00"), LocalDate.now(), "1");
+        Appointment appointment =
+                sampleAppointment(
+                        "1",
+                        AppointmentStatus.COMPLETED
+                );
+
+        Bill bill =
+                new Bill(
+                        "1",
+                        appointment,
+                        new BigDecimal("15000.00"),
+                        LocalDate.now(),
+                        "1"
+                );
+
+        bill.setPaymentType(
+                paymentType
+        );
+
+        bill.setStatus(
+                BillStatus.PAID
+        );
+
+        return bill;
     }
 
     private User sampleUser() {
-        return new User("1", "jdoe", "hashedvalue", UserRole.RECEPTIONIST, "Jane Doe", "0711234567");
+        return new User(
+                "1",
+                "jdoe",
+                "hashedvalue",
+                UserRole.RECEPTIONIST,
+                "Jane Doe",
+                "0711234567"
+        );
     }
 }

@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface PatientServiceInterface {
 
-    Patient registerPatient(String name, String address, String contactNumber) throws ValidationException;
+    Patient registerPatient(String name, String address, String contactNumber, String email) throws ValidationException;
 
     Patient findPatient(String patientId) throws RecordNotFoundException;
 

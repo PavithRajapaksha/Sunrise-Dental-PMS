@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface PatientDAOInterface {
 
-    Patient createPatient(String name, String address, String contactNumber);
+    Patient createPatient(String name, String address, String contactNumber, String email);
 
     Optional<Patient> findById(String patientId);
 

@@ -15,6 +15,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @WebServlet("/patient")
@@ -26,7 +28,6 @@ public class PatientController extends HttpServlet {
     public PatientController() {
     }
 
-    // for testing
     PatientController(PatientServiceInterface patientService, AppointmentServiceInterface appointmentService) {
         this.patientService = patientService;
         this.appointmentService = appointmentService;
@@ -37,6 +38,7 @@ public class PatientController extends HttpServlet {
         if (patientService == null) {
             patientService = ServiceFactory.getPatientService();
         }
+
         if (appointmentService == null) {
             appointmentService = ServiceFactory.getAppointmentService();
         }
@@ -46,31 +48,67 @@ public class PatientController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         if (SessionUtil.getLoggedInUser(request) == null) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        String patientId = request.getParameter("patientId");
-        String contactNumber = request.getParameter("contactNumber");
+        String patientId =
+                request.getParameter("patientId");
+
+        String contactNumber =
+                request.getParameter("contactNumber");
 
         try {
-            if (patientId != null && !patientId.isEmpty()) {
-                showPatientWithHistory(request, response, patientService.findPatient(patientId));
+            if (patientId != null
+                    && !patientId.isEmpty()) {
+
+                showPatientWithHistory(
+                        request,
+                        response,
+                        patientService.findPatient(patientId)
+                );
+
                 return;
             }
 
-            if (contactNumber != null && !contactNumber.isEmpty()) {
-                showPatientWithHistory(request, response, patientService.findPatientByContactNumber(contactNumber));
+            if (contactNumber != null
+                    && !contactNumber.isEmpty()) {
+
+                showPatientWithHistory(
+                        request,
+                        response,
+                        patientService.findPatientByContactNumber(
+                                contactNumber
+                        )
+                );
+
                 return;
             }
 
-            List<Patient> patients = patientService.listAllPatients();
-            request.setAttribute("patients", patients);
-            request.getRequestDispatcher("patientList.jsp").forward(request, response);
+            List<Patient> patients =
+                    patientService.listAllPatients();
+
+            request.setAttribute(
+                    "patients",
+                    patients
+            );
+
+            request.getRequestDispatcher(
+                    "patientList.jsp"
+            ).forward(request, response);
+
         } catch (RecordNotFoundException e) {
-            request.setAttribute("errorMessage", e.getMessage());
-            request.getRequestDispatcher("patientList.jsp").forward(request, response);
+
+            request.setAttribute(
+                    "errorMessage",
+                    e.getMessage()
+            );
+
+            request.getRequestDispatcher(
+                    "patientList.jsp"
+            ).forward(request, response);
         }
     }
 
@@ -78,34 +116,106 @@ public class PatientController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
         if (SessionUtil.getLoggedInUser(request) == null) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        String name = request.getParameter("name");
-        String address = request.getParameter("address");
-        String contactNumber = request.getParameter("contactNumber");
+        String name =
+                request.getParameter("name");
+
+        String address =
+                request.getParameter("address");
+
+        String contactNumber =
+                request.getParameter("contactNumber");
+
+        String email =
+                request.getParameter("email");
+
+        String returnTo =
+                request.getParameter("returnTo");
 
         try {
-            Patient created = patientService.registerPatient(name, address, contactNumber);
+            Patient created =
+                    patientService.registerPatient(
+                            name,
+                            address,
+                            contactNumber,
+                            email
+                    );
 
-            request.setAttribute("patient", created);
-            request.setAttribute("successMessage", "Patient registered successfully.");
-            request.getRequestDispatcher("patientDetails.jsp").forward(request, response);
+            if ("appointment".equals(returnTo)) {
+
+                String encodedPatientId =
+                        URLEncoder.encode(
+                                created.getPatientId(),
+                                StandardCharsets.UTF_8
+                        );
+
+                response.sendRedirect(
+                        request.getContextPath()
+                                + "/appointment?action=book"
+                                + "&patientId="
+                                + encodedPatientId
+                                + "&registered=true"
+                );
+
+                return;
+            }
+
+            request.setAttribute(
+                    "patient",
+                    created
+            );
+
+            request.setAttribute(
+                    "successMessage",
+                    "Patient registered successfully."
+            );
+
+            request.getRequestDispatcher(
+                    "patientDetails.jsp"
+            ).forward(request, response);
+
         } catch (ValidationException e) {
-            request.setAttribute("errorMessage", e.getMessage());
-            request.getRequestDispatcher("registerPatient.jsp").forward(request, response);
+
+            request.setAttribute(
+                    "errorMessage",
+                    e.getMessage()
+            );
+
+            request.getRequestDispatcher(
+                    "registerPatient.jsp"
+            ).forward(request, response);
         }
     }
 
     // Attach patient and appointment history
-    private void showPatientWithHistory(HttpServletRequest request, HttpServletResponse response, Patient patient)
+    private void showPatientWithHistory(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Patient patient)
             throws ServletException, IOException {
-        List<Appointment> appointments = appointmentService.listAppointmentsForPatient(patient.getPatientId());
 
-        request.setAttribute("patient", patient);
-        request.setAttribute("appointments", appointments);
-        request.getRequestDispatcher("patientDetails.jsp").forward(request, response);
+        List<Appointment> appointments =
+                appointmentService
+                        .listAppointmentsForPatient(
+                                patient.getPatientId()
+                        );
+
+        request.setAttribute(
+                "patient",
+                patient
+        );
+
+        request.setAttribute(
+                "appointments",
+                appointments
+        );
+
+        request.getRequestDispatcher(
+                "patientDetails.jsp"
+        ).forward(request, response);
     }
 }

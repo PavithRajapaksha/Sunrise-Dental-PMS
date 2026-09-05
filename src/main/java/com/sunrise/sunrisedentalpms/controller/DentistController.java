@@ -51,6 +51,7 @@ public class DentistController extends HttpServlet {
 
         if (dentistId == null || dentistId.isEmpty()) {
             boolean availableOnly = "true".equals(request.getParameter("availableOnly"));
+
             List<Dentist> dentists = availableOnly
                     ? dentistService.listAvailableDentists()
                     : dentistService.listAllDentists();
@@ -70,7 +71,6 @@ public class DentistController extends HttpServlet {
         }
     }
 
-    // manage dentists
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -90,14 +90,19 @@ public class DentistController extends HttpServlet {
         }
     }
 
-    // Register new dentist
     private void handleRegister(HttpServletRequest request, HttpServletResponse response, User loggedInUser)
             throws ServletException, IOException {
         String name = request.getParameter("name");
         String contactNumber = request.getParameter("contactNumber");
+        String email = request.getParameter("email");
 
         try {
-            Dentist created = dentistService.registerDentist(name, contactNumber, loggedInUser.getRole());
+            Dentist created = dentistService.registerDentist(
+                    name,
+                    contactNumber,
+                    email,
+                    loggedInUser.getRole()
+            );
 
             request.setAttribute("dentist", created);
             request.setAttribute("successMessage", "Dentist registered successfully.");
@@ -122,10 +127,10 @@ public class DentistController extends HttpServlet {
 
         try {
             DentistStatus newStatus = DentistStatus.valueOf(statusText);
+
             dentistService.updateDentistStatus(dentistId, newStatus);
 
-            request.setAttribute("successMessage", "Dentist status updated successfully.");
-            request.getRequestDispatcher("dentistList.jsp").forward(request, response);
+            response.sendRedirect(request.getContextPath() + "/dentist");
         } catch (IllegalArgumentException e) {
             request.setAttribute("errorMessage", "Invalid dentist status.");
             request.getRequestDispatcher("dentistList.jsp").forward(request, response);

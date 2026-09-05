@@ -145,7 +145,8 @@ class PatientControllerTest {
         when(request.getParameter("name")).thenReturn("Kasun Silva");
         when(request.getParameter("address")).thenReturn("12 Galle Road, Colombo");
         when(request.getParameter("contactNumber")).thenReturn("0711234567");
-        when(patientService.registerPatient("Kasun Silva", "12 Galle Road, Colombo", "0711234567"))
+        when(request.getParameter("email")).thenReturn("kasun.silva@example.com");
+        when(patientService.registerPatient("Kasun Silva", "12 Galle Road, Colombo", "0711234567", "kasun.silva@example.com"))
                 .thenReturn(created);
         when(request.getRequestDispatcher("patientDetails.jsp")).thenReturn(dispatcher);
 
@@ -162,7 +163,8 @@ class PatientControllerTest {
         when(request.getParameter("name")).thenReturn("");
         when(request.getParameter("address")).thenReturn("12 Galle Road, Colombo");
         when(request.getParameter("contactNumber")).thenReturn("0711234567");
-        when(patientService.registerPatient("", "12 Galle Road, Colombo", "0711234567"))
+        when(request.getParameter("email")).thenReturn("kasun.silva@example.com");
+        when(patientService.registerPatient("", "12 Galle Road, Colombo", "0711234567", "kasun.silva@example.com"))
                 .thenThrow(new ValidationException("Could not register patient."));
         when(request.getRequestDispatcher("registerPatient.jsp")).thenReturn(dispatcher);
 

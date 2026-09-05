@@ -11,6 +11,8 @@ public class Bill {
     private final BigDecimal totalAmount;
     private final LocalDate generatedDate;
     private final String generatedByUserId;
+    private BillStatus status;
+    private PaymentType paymentType;
 
     public Bill(String billId, Appointment appointment, BigDecimal totalAmount,
                 LocalDate generatedDate, String generatedByUserId) {
@@ -29,6 +31,7 @@ public class Bill {
         this.totalAmount = totalAmount;
         this.generatedDate = generatedDate == null ? LocalDate.now() : generatedDate;
         this.generatedByUserId = generatedByUserId.trim();
+        this.status = BillStatus.PENDING;
     }
 
     public String getBillId() {
@@ -49,6 +52,22 @@ public class Bill {
 
     public String getGeneratedByUserId() {
         return generatedByUserId;
+    }
+
+    public BillStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BillStatus status) {
+        this.status = Objects.requireNonNull(status, "Status cannot be null");
+    }
+
+    public PaymentType getPaymentType() {
+        return paymentType;
+    }
+
+    public void setPaymentType(PaymentType paymentType) {
+        this.paymentType = paymentType;
     }
 
     @Override

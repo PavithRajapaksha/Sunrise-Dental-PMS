@@ -30,38 +30,41 @@ class DentistServiceTest {
     @Mock
     private DentistDAOInterface dentistDao;
 
+    @Mock
+    private Notifier notifier;
+
     private DentistService dentistService;
     private Dentist sampleDentist;
 
     @BeforeEach
     void setUp() {
-        dentistService = new DentistService(dentistDao);
+        dentistService = new DentistService(dentistDao, notifier);
         sampleDentist = new Dentist("1", "Dr. Perera", "0711234567");
     }
 
     @Test
     void Register_withValidData_shouldReturnDentist() throws ValidationException, AuthorizationException {
-        when(dentistDao.createDentist("Dr. Perera", "0711234567")).thenReturn(sampleDentist);
+        when(dentistDao.createDentist("Dr. Perera", "0711234567", "dr.perera@example.com")).thenReturn(sampleDentist);
 
-        Dentist result = dentistService.registerDentist("Dr. Perera", "0711234567", UserRole.ADMIN);
+        Dentist result = dentistService.registerDentist("Dr. Perera", "0711234567", "dr.perera@example.com", UserRole.ADMIN);
 
         assertEquals(sampleDentist, result);
     }
 
     @Test
     void Register_withInvalidData_shouldFail() {
-        when(dentistDao.createDentist("", "bad-number")).thenReturn(null);
+        when(dentistDao.createDentist("", "bad-number", "dr.perera@example.com")).thenReturn(null);
 
         assertThrows(ValidationException.class,
-                () -> dentistService.registerDentist("", "bad-number", UserRole.ADMIN));
+                () -> dentistService.registerDentist("", "bad-number", "dr.perera@example.com", UserRole.ADMIN));
     }
 
     @Test
     void Register_withNonAdminRole_shouldFail() {
         assertThrows(AuthorizationException.class,
-                () -> dentistService.registerDentist("Dr. Perera", "0711234567", UserRole.RECEPTIONIST));
+                () -> dentistService.registerDentist("Dr. Perera", "0711234567", "dr.perera@example.com", UserRole.RECEPTIONIST));
 
-        verify(dentistDao, never()).createDentist(anyString(), anyString());
+        verify(dentistDao, never()).createDentist(anyString(), anyString(), anyString());
     }
 
     @Test

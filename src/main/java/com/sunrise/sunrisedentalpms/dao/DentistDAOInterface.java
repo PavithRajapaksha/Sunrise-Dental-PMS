@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface DentistDAOInterface {
 
-    Dentist createDentist(String name, String contactNumber);
+    Dentist createDentist(String name, String contactNumber, String email);
 
     Optional<Dentist> findById(String dentistId);
 
