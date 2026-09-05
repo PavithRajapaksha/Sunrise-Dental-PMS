@@ -33,6 +33,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -104,8 +105,12 @@ class BillControllerTest {
         when(session.getAttribute("loggedInUser"))
                 .thenReturn(sampleUser());
 
-        when(request.getParameter("billId"))
-                .thenReturn("1");
+        stubBillGetParameters(
+                "1",
+                null,
+                null,
+                null
+        );
 
         when(billingService.findBillById("1"))
                 .thenReturn(bill);
@@ -145,8 +150,12 @@ class BillControllerTest {
         when(session.getAttribute("loggedInUser"))
                 .thenReturn(sampleUser());
 
-        when(request.getParameter("appointmentNumber"))
-                .thenReturn("1");
+        stubBillGetParameters(
+                null,
+                "1",
+                null,
+                null
+        );
 
         when(billingService
                 .findBillByAppointmentNumber("1"))
@@ -217,8 +226,12 @@ class BillControllerTest {
         when(session.getAttribute("loggedInUser"))
                 .thenReturn(sampleUser());
 
-        when(request.getParameter("contactNumber"))
-                .thenReturn("0711234567");
+        stubBillGetParameters(
+                null,
+                null,
+                "0711234567",
+                null
+        );
 
         when(patientService
                 .findPatientByContactNumber(
@@ -282,8 +295,12 @@ class BillControllerTest {
         when(session.getAttribute("loggedInUser"))
                 .thenReturn(sampleUser());
 
-        when(request.getParameter("contactNumber"))
-                .thenReturn("0999999999");
+        stubBillGetParameters(
+                null,
+                null,
+                "0999999999",
+                null
+        );
 
         when(patientService
                 .findPatientByContactNumber(
@@ -341,6 +358,13 @@ class BillControllerTest {
         when(session.getAttribute("loggedInUser"))
                 .thenReturn(sampleUser());
 
+        stubBillGetParameters(
+                null,
+                null,
+                null,
+                null
+        );
+
         when(billingService.listAllBills())
                 .thenReturn(bills);
 
@@ -379,8 +403,12 @@ class BillControllerTest {
         when(session.getAttribute("loggedInUser"))
                 .thenReturn(sampleUser());
 
-        when(request.getParameter("billId"))
-                .thenReturn("99");
+        stubBillGetParameters(
+                "99",
+                null,
+                null,
+                null
+        );
 
         when(billingService.findBillById("99"))
                 .thenThrow(
@@ -823,6 +851,29 @@ class BillControllerTest {
                 .sendRedirect(
                         "login.jsp"
                 );
+    }
+
+    private void stubBillGetParameters(
+            String billId,
+            String appointmentNumber,
+            String contactNumber,
+            String format) {
+
+        doReturn(billId)
+                .when(request)
+                .getParameter("billId");
+
+        doReturn(appointmentNumber)
+                .when(request)
+                .getParameter("appointmentNumber");
+
+        doReturn(contactNumber)
+                .when(request)
+                .getParameter("contactNumber");
+
+        doReturn(format)
+                .when(request)
+                .getParameter("format");
     }
 
     private Patient samplePatient() {

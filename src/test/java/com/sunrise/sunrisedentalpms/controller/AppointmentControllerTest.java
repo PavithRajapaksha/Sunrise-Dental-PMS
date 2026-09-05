@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -347,10 +348,10 @@ class AppointmentControllerTest {
                 sampleUser()
         );
 
-        when(request.getParameter(
-                "appointmentNumber"
-        )).thenReturn(
-                "1"
+        stubAppointmentListGetParameters(
+                "1",
+                null,
+                null
         );
 
         when(appointmentService
@@ -399,10 +400,10 @@ class AppointmentControllerTest {
                 sampleUser()
         );
 
-        when(request.getParameter(
-                "appointmentNumber"
-        )).thenReturn(
-                "99"
+        stubAppointmentListGetParameters(
+                "99",
+                null,
+                null
         );
 
         when(appointmentService
@@ -467,10 +468,10 @@ class AppointmentControllerTest {
                 sampleUser()
         );
 
-        when(request.getParameter(
-                "patientId"
-        )).thenReturn(
-                "1"
+        stubAppointmentListGetParameters(
+                null,
+                "1",
+                null
         );
 
         when(patientService
@@ -535,9 +536,9 @@ class AppointmentControllerTest {
                 sampleUser()
         );
 
-        when(request.getParameter(
-                "contactNumber"
-        )).thenReturn(
+        stubAppointmentListGetParameters(
+                null,
+                null,
                 "0711234567"
         );
 
@@ -603,9 +604,9 @@ class AppointmentControllerTest {
                 sampleUser()
         );
 
-        when(request.getParameter(
-                "contactNumber"
-        )).thenReturn(
+        stubAppointmentListGetParameters(
+                null,
+                null,
                 "0999999999"
         );
 
@@ -1047,9 +1048,6 @@ class AppointmentControllerTest {
                 );
     }
 
-    /*
-     * New cancellation test.
-     */
     @Test
     void Post_cancelScheduledAppointment_shouldCancel()
             throws Exception {
@@ -1122,9 +1120,6 @@ class AppointmentControllerTest {
                 );
     }
 
-    /*
-     * Completed appointments must not be cancellable.
-     */
     @Test
     void Post_cancelCompletedAppointment_shouldShowError()
             throws Exception {
@@ -1218,6 +1213,28 @@ class AppointmentControllerTest {
                 .sendRedirect(
                         "login.jsp"
                 );
+    }
+
+    private void stubAppointmentListGetParameters(
+            String appointmentNumber,
+            String patientId,
+            String contactNumber) {
+
+        doReturn(null)
+                .when(request)
+                .getParameter("action");
+
+        doReturn(appointmentNumber)
+                .when(request)
+                .getParameter("appointmentNumber");
+
+        doReturn(patientId)
+                .when(request)
+                .getParameter("patientId");
+
+        doReturn(contactNumber)
+                .when(request)
+                .getParameter("contactNumber");
     }
 
     private Appointment sampleAppointment() {
